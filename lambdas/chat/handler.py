@@ -299,14 +299,28 @@ def _inbox_alert(household_id, title, body):
 
 CHAT_OK_PATTERNS = {"pay_command", "payee_command", "upi_handle"}
 SCAM_COMBO = {"secrecy", "pay_command", "payee_command"}
-SECRET_WORDS = re.compile(r"\b(otp|pin|cvv|password|passcode)\b", re.I)
+SECRET_WORDS = re.compile(r"\b(otp|pin|cvv|password|passcode|code)\b", re.I)
+CODE_RE = re.compile(r"(?<!\d)\d{4,8}(?!\d)")
+TOOL_PREFIX = re.compile(r"\bbank___")
 
 
 def _typed_secrets(message):
     """Short codes Amma typed next to OTP/PIN words. The reply must never repeat them (E6)."""
     if not SECRET_WORDS.search(message):
         return set()
-    return set(re.findall(r"(?<!\d)\d{4,8}(?!\d)", message))
+    return set(CODE_RE.findall(message))
+
+
+def _secret_hash(rsid, code):
+    """Codes are kept only as salted hashes, so the session row never holds an OTP."""
+    return hashing.sha256(f"{rsid}#{code}")
+
+
+def _hide_secrets(reply, rsid, hashes):
+    """Replace every 4 to 8 digit run whose hash matches a code Amma typed earlier in this chat."""
+    if not hashes:
+        return reply
+    return CODE_RE.sub(lambda m: "[hidden]" if _secret_hash(rsid, m.group()) in hashes else m.group(), reply)
 
 
 def _mask_digits(text):
@@ -493,12 +507,27 @@ def chat(event):
                            rule="R8", session_id=rsid)
     except Exception as e:
         _log(f"output guardrail failed {type(e).__name__}")
-    for code in _typed_secrets(message):
-        hidden = re.sub(rf"(?<!\d){code}(?!\d)", "[hidden]", reply)
-        if hidden != reply:
-            receipts.write(household_id, "proxy", "flag", "A code Amma typed (OTP or PIN) was hidden from the reply.",
-                           rule="R8", session_id=rsid)
-            reply = hidden
+    # E6: codes Amma typed next to OTP/PIN words stay hidden for the rest of the chat, not just this turn.
+    known = set(sess.get("secret_hashes") or [])
+    new = {_secret_hash(rsid, c) for c in _typed_secrets(message)} - known
+    if new:
+        known |= new
+        try:
+            db.tbl("sessions").update_item(
+                Key={"pk": "T#" + hashing.sha256(data["chat_token"])},
+                UpdateExpression="SET secret_hashes = :s", ExpressionAttributeValues={":s": sorted(known)[-20:]})
+        except Exception as e:
+            _log(f"secret hashes not saved {type(e).__name__}")
+    hidden = _hide_secrets(reply, rsid, known)
+    if hidden != reply:
+        receipts.write(household_id, "proxy", "flag", "A code Amma typed (OTP or PIN) was hidden from the reply.",
+                       rule="R8", session_id=rsid)
+        reply = hidden
+    # R8: the gateway's internal tool prefix is setup detail, not something to show Amma.
+    if TOOL_PREFIX.search(reply):
+        reply = TOOL_PREFIX.sub("", reply)
+        receipts.write(household_id, "proxy", "flag", "Internal tool names were cleaned from the reply.",
+                       rule="R8", session_id=rsid)
     masked = _mask_digits(reply)
     if masked != reply:
         receipts.write(household_id, "proxy", "flag", "Long number masked in the reply.", rule="R8", session_id=rsid)

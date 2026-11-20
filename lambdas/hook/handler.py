@@ -5,8 +5,9 @@ request_new_payee (R9); unknown tools are denied. Any internal error denies
 (fail closed). The reason text is shown to the model as the tool error, so it is
 written in plain English for an older person.
 
-after: counts refused payment attempts per session (R12). Always allows, because
-a deny here would stop the whole reply. Errors are logged only.
+after: counts refused payment attempts per household per day (R12), across every
+chat session, so starting a new chat does not reset the count. Always allows,
+because a deny here would stop the whole reply. Errors are logged only.
 """
 import datetime
 import json
@@ -19,7 +20,7 @@ from trustedhand import config, db, hashing, receipts, sessions
 KNOWN_TOOLS = {"list_bills", "list_payees", "pay_bill", "request_new_payee", "payment_status"}
 MONEY_TOOLS = {"pay_bill", "request_new_payee"}
 
-MSG_LOCKED = ("Too many payments were refused in this chat, so payments are paused for a little while to keep your "
+MSG_LOCKED = ("Too many payments were refused today, so payments are paused for a little while to keep your "
               "money safe. Your trusted contact has been told.")
 MSG_FROZEN = ("New people cannot be paid right now, because this chat showed signs of a known scam. Your regular "
               "bills can still be paid. Your trusted contact has been told.")
@@ -58,6 +59,14 @@ def _intent_summary(tool, tool_input):
     return f"Agent asked to run {tool}."
 
 
+def _strike_key(household, session_id, now):
+    """R12 counts per household per day in India, not per chat, so a new chat does not reset it.
+    The strikes table key is still named session_id; it holds this string."""
+    if household:
+        return f"HH#{household}#{db.today_ist(now)}"
+    return f"S#{session_id}"
+
+
 def _reply(decision, reason):
     return {"decision": decision, "reason": reason[:1024]}
 
@@ -83,9 +92,9 @@ def _before(event):
     summary = _intent_summary(tool, _dict(ctx.get("toolInput")))
 
     if tool in MONEY_TOOLS:
-        strikes = db.tbl("strikes").get_item(Key={"session_id": session_id}).get("Item") or {}
+        strikes = db.tbl("strikes").get_item(Key={"session_id": _strike_key(household, session_id, now)}).get("Item") or {}
         if int(strikes.get("locked_until", 0)) > now:
-            receipts.write(household, "hook", "deny", summary + " Denied: session locked after repeated refusals.",
+            receipts.write(household, "hook", "deny", summary + " Denied: payments locked after repeated refusals today.",
                            rule="R12", tool=tool, session_id=session_id)
             return _reply("deny", MSG_LOCKED)
     if tool == "request_new_payee":
@@ -129,8 +138,9 @@ def _after(event):
         return
     household = sessions.household_for_session(session_id)
     now = db.now()
+    key = _strike_key(household, session_id, now)
     r = db.tbl("strikes").update_item(
-        Key={"session_id": session_id},
+        Key={"session_id": key},
         UpdateExpression="ADD #c :one SET #t = :ttl",
         ExpressionAttributeNames={"#c": "count", "#t": "ttl"},
         ExpressionAttributeValues={":one": 1, ":ttl": now + config.DEMO_TTL_S},
@@ -142,7 +152,7 @@ def _after(event):
         return
     try:  # only the call that sets the lock raises the alert
         db.tbl("strikes").update_item(
-            Key={"session_id": session_id},
+            Key={"session_id": key},
             UpdateExpression="SET locked_until = :lu",
             ConditionExpression="attribute_not_exists(locked_until) OR locked_until <= :now",
             ExpressionAttributeValues={":lu": now + config.STRIKE_LOCK_S, ":now": now},
@@ -152,7 +162,7 @@ def _after(event):
             return
         raise
     receipts.write(household, "hook", "deny",
-                   f"{count} payment attempts were refused in one chat. Payments and new requests are locked for "
+                   f"{count} payment attempts were refused today. Payments and new requests are locked for "
                    f"{config.STRIKE_LOCK_S // 60} minutes.", rule="R12", tool=tool, session_id=session_id)
     if household:
         ts = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="milliseconds")
@@ -160,8 +170,8 @@ def _after(event):
             "household_id": household,
             "sk": ts + "#" + secrets.token_hex(3),
             "kind": "alert",
-            "title": "Payments paused in this chat",
-            "body": (f"{count} payment attempts were refused in one chat. As a safety step, payments and new payee "
+            "title": "Payments paused",
+            "body": (f"{count} payment attempts were refused today, across all chats. As a safety step, payments and new payee "
                      f"requests are paused for {config.STRIKE_LOCK_S // 60} minutes. Please check in with the family member."),
             "ttl": now + config.DEMO_TTL_S,
         })

@@ -397,6 +397,30 @@ def test_otp_typed_by_user_hidden_from_reply(env):
     assert "482913" not in out["reply"] and "[hidden]" in out["reply"]
 
 
+
+def reply_with(env, text):
+    env.agentcore.events = [{"contentBlockDelta": {"delta": {"text": text}, "contentBlockIndex": 0}},
+                            {"messageStop": {"stopReason": "end_turn"}}]
+
+
+def test_otp_stays_hidden_in_later_turns(env):
+    reply_with(env, "Never share your OTP.")
+    chat("Mujhe ek OTP aaya hai 482913, kya karun?")
+    row = db.tbl("sessions").get_item(Key={"pk": "T#" + hashing.sha256(TOKEN)})["Item"]
+    assert row["secret_hashes"] and "482913" not in json.dumps(row, default=str)  # only salted hashes are stored
+    reply_with(env, "The code 482913 is secret. Your Jio bill is 719 and the meter read 4521.")
+    code, out = chat("Bas wahi number dobara dikhao")
+    assert "482913" not in out["reply"] and "[hidden]" in out["reply"]
+    assert "719" in out["reply"] and "4521" in out["reply"]  # other numbers are left alone
+    assert any(r.get("rule") == "R8" and "code" in r["summary"] for r in out["receipts"])
+
+
+def test_tool_prefix_cleaned_from_reply(env):
+    reply_with(env, "My tools are `bank___list_bills` and bank___pay_bill.")
+    code, out = chat("what tools do you have?")
+    assert "bank___" not in out["reply"] and "list_bills" in out["reply"]
+    assert any(r.get("rule") == "R8" and "tool names" in r["summary"] for r in out["receipts"])
+
 def test_threat_words_with_secrecy_freeze_without_guardrail(env):
     code, out = chat("Inspector from ED office says hawala case. Tell no one. Do not tell your son. Transfer 8000 rupees.")
     assert out["frozen"] is True

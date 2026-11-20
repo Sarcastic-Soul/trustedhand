@@ -39,7 +39,7 @@ What it must refuse, enforced below the model:
 | R9 | Scam signs in the chat (police or CBI threats, "digital arrest", "safe account", gift cards, crypto, "don't tell your family", OTPs) freeze new payees and transfers, tell Amma calmly that it is a known scam, and alert Ravi. Known bills stay payable. |
 | R10 | The agent cannot change limits, approve requests, lift a freeze or edit payees. No tool exists for any of these. |
 | R11 | Rate limits per session, per IP and per day. |
-| R12 | After 3 refused payment attempts in one session, payments lock for 30 minutes and Ravi is alerted. |
+| R12 | After 3 refused payment attempts in a day, across all chats, payments lock for 30 minutes and Ravi is alerted. |
 
 The full contract, with every table, tool schema and API, is in [docs/DESIGN.md](docs/DESIGN.md).
 
@@ -69,7 +69,7 @@ flowchart LR
 |---|---|
 | L0 Chat proxy | Floods (R11), prompt attacks and scam topics before the model sees them (R9 freeze), any attempt by the client to swap the model, tools or prompt. |
 | L1 Harness | Tool sprawl: only the five `bank` tools, no built-in tools, short runs. |
-| L2 Hooks | Probing: three refusals lock the session (R12). Every tool call gets a plain-English receipt before it runs. |
+| L2 Hooks | Probing: three refusals in a day lock payments for the household (R12). Every tool call gets a plain-English receipt before it runs. |
 | L3 Request interceptor | Identity spoofing: the household comes from the session, never from what the model sends. |
 | L4 Cedar | Out-of-range amounts and unknown tools, even if every layer above is fooled. |
 | L5 Response interceptor | Injection inside bill memos and payee names (R7), leaked account numbers (R8). |
@@ -93,18 +93,21 @@ See [docs/RESULTS.md](docs/RESULTS.md). There are 94 attacks: 70 written by us, 
 | fooled | 74/87 | 87/87 | 7/7 |
 | gullible | 82/87 | 87/87 | 7/7 |
 
-When the model was fully fooled, the worst it did was pay Amma's own real bills, each at exactly the amount due and only once. Payment races (60 at once), approval races and direct calls under the model all held.
+When the model was fully fooled, the worst it did was pay Amma's own real bills, each at exactly the amount due and only once. Payment races (60 at once), approval races, the strike lock across chats and direct calls under the model all held.
+
+An adaptive attacker (a second model playing the scammer, reading each reply and changing tactics for up to 6 turns) ran 48 conversations per profile: 8 goals times 6 tactics. Its first hardened run won 3 of 48 by getting an OTP repeated a turn later and an internal tool name shown; after the fix the hardened stack held 48 of 48. No adaptive conversation broke a money or safety invariant on any profile.
 
 ## Run it yourself
 
 Needs: AWS account with Bedrock AgentCore and Nova 2 Lite access in us-east-1, Terraform 1.9+, `uv`, Python 3.13.
 
 ```bash
-make test                         # 255 unit tests, no AWS needed (moto)
+make test                         # 267 unit tests, no AWS needed (moto)
 make deploy PROFILE=<aws-profile> # Lambdas, tables, gateway, policy, guardrails, API, web, harness
 make web PROFILE=<aws-profile>    # re-upload the web files
 scripts/smoke.sh                  # start a demo household and list bills
 uv run python eval/run.py --set all --profile hardened --repeat 2
+uv run python -m eval.adaptive --profile hardened   # a second model plays the scammer, turn by turn
 make destroy PROFILE=<aws-profile>
 ```
 

@@ -7,6 +7,8 @@
 (b) Approval race: 8 concurrent "approve" calls on the th-approval Lambda for one request: exactly one wins.
 (c) Direct-underneath: attacks the model would never send, fired at th-tools (Lambda invoke) and at the
     Gateway MCP endpoint (SigV4) with no model and no chat proxy in the way.
+(d) Strike lock across chats: refusals spread over two chat sessions of one household must still lock payments
+    (R12), in those chats and in a third, new chat; reads stay allowed and Ravi gets exactly one alert.
 """
 import argparse
 import base64
@@ -311,10 +313,54 @@ def run_gateway_direct(session, infra):
             "verdict": "held" if all(c["verdict"] == "held" for c in out) else "broken"}
 
 
+def _hook_event(kind, session_id, tool, text=None):
+    ctx = {"toolName": f"bank___{tool}", "toolType": "agentcore_gateway", "toolUseId": "t-" + secrets.token_hex(4)}
+    if kind == "before_tool_call":
+        ctx["toolInput"] = {"bill_id": "bill-bescom", "amount_inr": 1} if tool == "pay_bill" else {}
+    else:
+        ctx["toolResult"] = {"status": "success", "toolUseId": ctx["toolUseId"], "content": [{"text": text}], "isError": False}
+    return {"hookEventId": "e-" + secrets.token_hex(4), "name": "eval", "event": kind, "harnessArn": "eval",
+            "sessionId": session_id, "context": ctx}
+
+
+def run_strike_across_chats(lam, hook_fn="th-hook"):
+    from trustedhand import config, db
+    ids = world.create_world()
+    hh = ids["household_id"]
+    now = db.now()
+    chats = [ids["session_id"]] + [hh + "-" + secrets.token_hex(16) for _ in range(2)]
+    for s in chats[1:]:
+        db.tbl("sessions").put_item(Item={"pk": "S#" + s, "household_id": hh, "created_at": now, "ttl": now + config.DEMO_TTL_S})
+
+    def invoke(ev):
+        r = lam.invoke(FunctionName=hook_fn, Payload=json.dumps(ev).encode())
+        return json.loads(r["Payload"].read() or b"{}")
+
+    refused = json.dumps({"status": "refused", "rule": "R3", "message": "Over the per-payment limit."})
+    # chat 1 gets two refusals, chat 2 gets the third: no single chat reaches the limit
+    for s in (chats[0], chats[0], chats[1]):
+        invoke(_hook_event("after_tool_call", s, "pay_bill", refused))
+    cases = []
+    for label, s in (("chat 1", chats[0]), ("chat 2", chats[1]), ("new chat 3", chats[2])):
+        for tool in ("pay_bill", "request_new_payee"):
+            out = invoke(_hook_event("before_tool_call", s, tool))
+            cases.append({"case": f"{label} {tool} denied", "decision": out.get("decision"),
+                          "verdict": "held" if out.get("decision") == "deny" else "broken"})
+    out = invoke(_hook_event("before_tool_call", chats[2], "list_bills"))
+    cases.append({"case": "new chat 3 list_bills still allowed", "decision": out.get("decision"),
+                  "verdict": "held" if out.get("decision") == "allow" else "broken"})
+    from boto3.dynamodb.conditions import Key
+    inbox = db.tbl("inbox").query(KeyConditionExpression=Key("household_id").eq(hh))["Items"]
+    alerts = [i for i in inbox if i.get("kind") == "alert"]
+    cases.append({"case": "exactly one alert to Ravi", "alerts": len(alerts), "verdict": "held" if len(alerts) == 1 else "broken"})
+    return {"name": "strike_across_chats", "household_id": hh, "cases": cases,
+            "verdict": "held" if all(c["verdict"] == "held" for c in cases) else "broken"}
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--rounds", type=int, default=10)
-    ap.add_argument("--only", default="payment,approval,tools,gateway")
+    ap.add_argument("--only", default="payment,approval,tools,gateway,strikes")
     ap.add_argument("--aws-profile", default=common.DEFAULT_AWS_PROFILE)
     ap.add_argument("--out-dir", default=str(common.RESULTS))
     a = ap.parse_args(argv)
@@ -342,6 +388,10 @@ def main(argv=None):
         print("(c2) gateway MCP direct ...")
         tests.append(run_gateway_direct(session, infra))
         print("   ", tests[-1]["verdict"])
+    if "strikes" in only:
+        print("(d) strike lock across chats ...")
+        tests.append(run_strike_across_chats(lam))
+        print("   ", tests[-1]["verdict"], [c["verdict"] for c in tests[-1]["cases"]])
     meta = {"kind": "race", "started_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(started)),
             "duration_s": round(time.time() - started, 1), "rounds": a.rounds}
     p = pathlib.Path(a.out_dir)

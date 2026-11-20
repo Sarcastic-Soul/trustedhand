@@ -51,6 +51,16 @@ def test_pay_bill_and_status(hh):
     assert call("pay_bill", _session_id=SESS, bill_id="bill-jio", amount_inr=719)["rule"] == "R5"
 
 
+def test_reads_write_info_receipts(hh):
+    from trustedhand import receipts
+    for tool in ("list_bills", "list_payees", "payment_status"):
+        call(tool, _session_id=SESS)
+    rows = [r for r in receipts.recent(HH) if r["layer"] == "tool"]
+    assert sorted(r["tool"] for r in rows) == ["list_bills", "list_payees", "payment_status"]
+    assert all(r["decision"] == "info" and r["session_id"] == SESS for r in rows)
+    assert not [r for r in receipts.recent(OTHER) if r["layer"] == "tool"]
+
+
 def test_refusal_is_a_normal_return(hh):
     r = call("pay_bill", _session_id=SESS, bill_id="bill-bescom", amount_inr=99999)
     assert r["status"] == "refused" and r["rule"] in ("R2", "R3")

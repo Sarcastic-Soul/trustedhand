@@ -3,8 +3,12 @@
 Event = the tool arguments map. The tool name comes from the Gateway client
 context. `_session_id` is set by the REQUEST interceptor; any household_id the
 model sends is ignored (identity comes only from the session).
+
+Read-only tools write an "info" receipt here, so every tool call leaves a record
+even when the harness hooks are off (the hooks ablation showed reads otherwise
+left no trace). Money tools write their own receipts in `payments`.
 """
-from trustedhand import db, payments, sessions
+from trustedhand import db, payments, receipts, sessions
 
 _GENERIC_ERROR = {"status": "error", "message": "Something went wrong. Nothing was paid."}
 
@@ -17,6 +21,21 @@ def _tool_name(context):
         return ""
 
 
+READS = {
+    "list_bills": lambda hh, now: payments.list_bills(hh),
+    "list_payees": payments.list_payees,
+    "payment_status": payments.status,
+}
+
+
+def _read_summary(tool, out):
+    if tool == "list_bills":
+        return f"Read {len(out.get('bills') or [])} bills."
+    if tool == "list_payees":
+        return f"Read {len(out.get('payees') or [])} approved payees."
+    return "Read today's spending, limits and pending requests."
+
+
 def handler(event, context):
     try:
         args = dict(event) if isinstance(event, dict) else {}
@@ -26,12 +45,10 @@ def handler(event, context):
             return {"status": "error", "message": "Session not recognised."}
         tool = _tool_name(context)
         now = db.now()
-        if tool == "list_bills":
-            return payments.list_bills(household_id)
-        if tool == "list_payees":
-            return payments.list_payees(household_id, now)
-        if tool == "payment_status":
-            return payments.status(household_id, now)
+        if tool in READS:
+            out = READS[tool](household_id, now)
+            receipts.write(household_id, "tool", "info", _read_summary(tool, out), tool=tool, session_id=session_id)
+            return out
         if tool == "pay_bill":
             return payments.pay(household_id, session_id, args.get("bill_id"), args.get("amount_inr"), now)
         if tool == "request_new_payee":

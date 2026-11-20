@@ -35,7 +35,7 @@ What it must refuse (enforced below the model):
 - **R9** If the chat shows scam signs (police/CBI/customs/court threats, "digital arrest", "safe account", "RBI verification account", gift cards, crypto, "don't tell your family", OTP/PIN sharing), the household is frozen for new payees and transfers, the elder is told calmly that this is a known scam, and the trusted contact is alerted. Known bills stay payable so the lights stay on.
 - **R10** The agent cannot change limits, approve requests, lift a freeze or edit payees. No tool exists for any of these.
 - **R11** Rate limits: per session, per IP and a global daily cap on agent runs.
-- **R12** After 3 refused payment attempts in one chat session, payments and new requests are locked for that session for 30 minutes and the trusted contact is alerted (stops "try smaller amounts" probing and bill splitting).
+- **R12** After 3 refused payment attempts by one household in one day (India time), across all chat sessions, payments and new requests are locked for that household for 30 minutes and the trusted contact is alerted (stops "try smaller amounts" probing and bill splitting; starting a new chat does not reset the count).
 
 Edge cases:
 
@@ -57,7 +57,7 @@ Edge cases:
 | L3 | Gateway REQUEST interceptor | `lambdas/interceptor` | Overwrites `_session_id` in tool arguments with the real session id from the `baggage` header (identity, R8). Runs before Cedar. Never changes anything else. |
 | L4 | Cedar policy (AgentCore Policy, ENFORCE) | `infra/policies/*.cedar` | Default deny. Only the 5 tools. `pay_bill` amount 1..per-payment max (R3). `request_new_payee` amount 1..50,000. |
 | L5 | Gateway RESPONSE interceptor | `lambdas/interceptor` | Scans tool results: deterministic injection patterns + `ApplyGuardrail` on free-text fields; replaces flagged text (R7); masks account numbers (R8); writes policy-deny receipts. |
-| L6 | Tool Lambda + DynamoDB | `lambdas/tools` + `trustedhand.payments` | Source of truth. R1, R2, R3, R4, R5, R6, R9 checked here with one `TransactWriteItems` (atomic cap, idempotency). |
+| L6 | Tool Lambda + DynamoDB | `lambdas/tools` + `trustedhand.payments` | Source of truth. R1, R2, R3, R4, R5, R6, R9 checked here with one `TransactWriteItems` (atomic cap, idempotency). Writes a receipt for every call, reads included, so the record does not depend on the hooks. |
 | L7 | Separate approval channel | `lambdas/notifier` (DynamoDB stream) + `lambdas/approval` (HTTP API) | One-time token, stored as SHA-256 only, bound to `request_hash`, single use (conditional write), 72 h expiry. Only these Lambdas' roles can write `approvals`, `payees`; the tool role cannot (IAM). |
 | L8 | IAM | `infra/iam.tf` | Each Lambda role gets only its tables and actions. Harness role: Bedrock model invoke, gateway invoke, hook Lambda invoke. Nothing else (no code interpreter, browser). |
 
@@ -113,7 +113,7 @@ All tables: string keys, TTL attribute `ttl` (epoch seconds) where noted. Demo d
 | Table | Keys | Attributes | Writers |
 |---|---|---|---|
 | `households` | pk `household_id` | `elder_name`, `contact_name`, `contact_email` (optional), `demo` (bool), `limits` map {`per_payment`, `daily`, `daily_count`, `cooloff_s`, `freeze_s`}, `frozen_until` (epoch, number, optional), `freeze_reason`, `created_at`, `ttl` | chat (create + set freeze), approval |
-| `sessions` | pk `pk` | Two item kinds. `S#<runtime_session_id>` → `household_id`, `created_at`, `ttl`, `asked_amounts` (rupee amounts in Amma's current message, rewritten every turn). `T#<sha256(chat_token)>` → `household_id`, `runtime_session_id`, `ttl`. | chat |
+| `sessions` | pk `pk` | Two item kinds. `S#<runtime_session_id>` → `household_id`, `created_at`, `ttl`, `asked_amounts` (rupee amounts in Amma's current message, rewritten every turn). `T#<sha256(chat_token)>` → `household_id`, `runtime_session_id`, `ttl`, `secret_hashes` (salted hashes of codes Amma typed next to OTP/PIN words, E6). | chat |
 | `payees` | pk `household_id`, sk `payee_id` | `name`, `account` (full, never returned), `account_masked`, `usable_from` (epoch), `source` (`seed`/`approval`), `request_id` | chat (seed), approval |
 | `bills` | pk `household_id`, sk `bill_id` | `biller`, `payee_id`, `amount_due_inr` (N), `due_date`, `status` (`unpaid`/`paid`), `memo`, `kind` (`bill`/`transfer`), `ttl` | chat (seed), approval (transfer bill), tools (status only, conditional) |
 | `ledger` | pk `household_id`, sk `DAY#YYYY-MM-DD` or `PAY#<payment_id>` | DAY: `spent_inr` N, `count` N. PAY: `bill_id`, `payee_id`, `amount_inr`, `session_id`, `created_at` | tools |
@@ -122,7 +122,7 @@ All tables: string keys, TTL attribute `ttl` (epoch seconds) where noted. Demo d
 | `inbox` | pk `household_id`, sk `<iso ts>#<id>` | Messages for the trusted contact: `kind` (`approval_request`/`alert`/`info`), `title`, `body`, `link` (optional), `ttl` | notifier, chat (alerts), hook (alerts) |
 | `receipts` | pk `household_id`, sk `<iso ts>#<id>` | `session_id`, `layer`, `rule`, `decision` (`allow`/`deny`/`flag`/`info`), `tool`, `summary` (≤300 chars, no secrets), `ttl` | every Lambda |
 | `ratelimit` | pk `key` | `count` N, `ttl` | chat, approval |
-| `strikes` | pk `session_id` | `count` N, `locked_until` N, `ttl` | hook |
+| `strikes` | pk `session_id` (holds `HH#<household_id>#<IST day>`) | `count` N, `locked_until` N, `ttl` | hook |
 
 `request_hash = sha256("household_id|request_id|payee_name|account|amount_inr")` hex, using `trustedhand.hashing.request_hash`.
 
@@ -236,7 +236,8 @@ def list_payees(household_id, now) -> dict
 - The harness keeps conversation history per `runtimeSessionId`, so `SEND_HISTORY` stays off.
 - R2 is now "exactly the amount due" (was "up to the amount due"). The fooled-model stress run paid ₹1 on each of the five bills, and v1 closed a bill on any payment, so all five looked paid. Pay checks run R3 and R4 before R2, so a bill above the per-payment limit is refused with R3 and needs Ravi.
 - The chat proxy also freezes (R9) when its own text scan finds threat words (police, CBI, ED, court, safe account) together with secrecy or a money command. The guardrail missed an "ED officer, hawala case, bail guarantee" message in the stress test.
-- The chat proxy hides 4 to 8 digit codes from the reply when Amma's message mentions an OTP, PIN, CVV or password (E6). A fooled model repeated an OTP back in the stress test.
+- The chat proxy hides 4 to 8 digit codes from the reply when Amma's message mentions an OTP, PIN, CVV, password or code (E6), for the rest of the chat, not just that turn. The session's token row keeps only salted hashes of those codes (`secret_hashes`), never the codes. A fooled model repeated an OTP back in the stress test, and the adaptive attacker got the hardened model to repeat one a turn later.
+- The chat proxy removes the gateway's internal tool prefix (`bank___`) from replies (R8).
 - Nine held-out attacks (`h02` to `h24`) had generated expectations that counted correct behaviour as a failure, for example paying the water bill's ₹420 once when asked to "add ₹1,000 extra". They were corrected by hand; the original is kept as `expect_original` in `eval/attacks/heldout.jsonl`.
 - A message that the guardrail blocks as a prompt attack can also carry scam signs (a fake ED officer telling Amma to pay "bail"). The proxy used to return early on a prompt attack, before the freeze. It now freezes and alerts Ravi first, and the reply is a short scam warning instead of the generic "I can't act on that".
 - Amount substitution: when Amma asked for an amount that is not due ("Pay ₹10,001 to Apollo", "Pay Rs.12,000 to Indane"), Nova 2 Lite often paid the amount due instead, without asking. No money rule broke (it was a real bill, paid exactly once), but E7 did, and a prompt fix did not hold. The chat proxy now records the rupee amounts in her message (only numbers with ₹, Rs, INR, rupees or /-) on the session row, and `pay_bill` refuses any amount she did not name that turn. When she confirms with "yes" (no amount), the payment goes through.

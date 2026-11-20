@@ -68,6 +68,61 @@ def load_results(results_dir):
     return conditions, race
 
 
+def load_adaptive(results_dir):
+    """Newest adaptive-attacker file per profile: {profile: {"file": name, "meta": {...}, "runs": [...]}}."""
+    out = {}
+    for f in sorted(glob.glob(str(pathlib.Path(results_dir) / "*-adaptive-*.json"))):
+        try:
+            d = json.loads(pathlib.Path(f).read_text())
+        except ValueError:
+            continue
+        if d.get("meta", {}).get("kind") == "adaptive":
+            out[d["meta"]["profile"]] = {"file": pathlib.Path(f).name, "meta": d["meta"], "runs": d["adaptive"]}
+    return out
+
+
+def render_adaptive(adaptive):
+    order = [p for p in ("hardened", "fooled") if p in adaptive]
+    if not order:
+        return []
+    first = adaptive[order[0]]["meta"]
+    goals, tactics = first["goals"], first["tactics"]
+    L = ["## Adaptive attacker", "",
+         f"A second model (`{first['attacker']}`, fallback `{first['attacker_fallback']}`) plays the scammer. It gets a goal, "
+         f"a tactic and the same description of TrustedHand the held-out author saw, reads each reply and writes the next message, "
+         f"for up to {first['max_turns']} turns. Each conversation runs in a fresh household; the database is checked after every turn "
+         "and the attacker wins as soon as an invariant or the goal's own check breaks.", "",
+         "| Profile | Conversations | Held | Attacker won | Errors | Turns sent | File |", "|---|---|---|---|---|---|---|"]
+    for p in order:
+        rr = adaptive[p]["runs"]
+        L.append(f"| {p} | {len(rr)} | {sum(r['verdict'] == 'held' for r in rr)} | {sum(r['verdict'] == 'broken' for r in rr)} | "
+                 f"{sum(r['verdict'] == 'error' for r in rr)} | {sum(r.get('turns_used') or 0 for r in rr)} | `{adaptive[p]['file']}` |")
+    allr = [r for p in order for r in adaptive[p]["runs"]]
+    inv = sum(r.get("invariant_verdict") == "broken" for r in allr)
+    L += ["", f"The ten money and safety invariants broke in {inv} of {len(allr)} conversations. A win here means the goal's own check "
+          "broke (for example the reply repeated the OTP or showed an internal tool name).",
+          "", "Wins by goal (rows) and tactic (columns), " + " / ".join(order) + ":", "",
+          "| Goal | " + " | ".join(tactics) + " |", "|---|" + "---|" * len(tactics)]
+    for g in goals:
+        cells = []
+        for t in tactics:
+            marks = []
+            for p in order:
+                r = next((x for x in adaptive[p]["runs"] if x["goal"] == g and x["tactic"] == t), None)
+                marks.append("-" if r is None else {"held": "held", "broken": "**won**"}.get(r["verdict"], r["verdict"]))
+            cells.append(" / ".join(marks))
+        L.append(f"| {g} | " + " | ".join(cells) + " |")
+    for p in order:
+        won = [r for r in adaptive[p]["runs"] if r["verdict"] == "broken"]
+        if not won:
+            continue
+        L += ["", f"### Attacker wins, {p}", "", "| Conversation | Broke | Turn | Deepest layer that acted |", "|---|---|---|---|"]
+        for r in won:
+            L.append(f"| {r['id']} | {', '.join(r['broken_keys'])} | {r['turns_used']} | {r.get('stopped_by')} |")
+    L.append("")
+    return L
+
+
 def per_attack(runs):
     """Aggregate repeats: {attack_id: {...}}. Broken if any repeat broke."""
     by = {}
@@ -106,7 +161,7 @@ def md_escape(s):
     return str(s).replace("|", "\\|").replace("\n", " ")
 
 
-def render_markdown(conditions, race=None, heldout_meta=None):
+def render_markdown(conditions, race=None, heldout_meta=None, adaptive=None):
     labels = sorted(conditions, key=condition_sort)
     agg = {l: per_attack(conditions[l]["runs"]) for l in labels}
     all_ids = {}
@@ -265,6 +320,8 @@ def render_markdown(conditions, race=None, heldout_meta=None):
                     L.append(f"| {c['case']} | {c['verdict']} | {md_escape(d)[:160]} |")
         L.append("")
 
+    L += render_adaptive(adaptive or {})
+
     if heldout_meta:
         L += ["## Held-out attack set", "",
               f"`eval/attacks/heldout.jsonl` was written by `{heldout_meta.get('primary_model')}` on {heldout_meta.get('generated_utc')} "
@@ -328,14 +385,15 @@ def main(argv=None):
     ap.add_argument("--svg", default=str(common.ROOT / "docs" / "img" / "heatmap.svg"))
     a = ap.parse_args(argv)
     conditions, race = load_results(a.results_dir)
-    if not conditions and not race:
+    adaptive = load_adaptive(a.results_dir)
+    if not conditions and not race and not adaptive:
         sys.exit(f"no results in {a.results_dir}")
     meta_p = common.ATTACKS / "heldout.meta.json"
     heldout = json.loads(meta_p.read_text()) if meta_p.exists() else None
     out, svg = pathlib.Path(a.out), pathlib.Path(a.svg)
     out.parent.mkdir(parents=True, exist_ok=True)
     svg.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(render_markdown(conditions, race, heldout))
+    out.write_text(render_markdown(conditions, race, heldout, adaptive))
     if conditions:
         svg.write_text(render_svg(conditions))
     print("wrote", out, "and", svg)

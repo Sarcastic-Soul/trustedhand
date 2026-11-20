@@ -8,7 +8,12 @@ from trustedhand import config, db, receipts
 
 HANDLER = pathlib.Path(__file__).resolve().parents[1] / "lambdas" / "hook" / "handler.py"
 SESSION = "hh-abc123def456-" + "b" * 32
+SESSION2 = "hh-abc123def456-" + "c" * 32
 HH = "hh-abc123def456"
+
+
+def strike_row():
+    return db.tbl("strikes").get_item(Key={"session_id": f"HH#{HH}#{db.today_ist()}"}).get("Item")
 
 
 @pytest.fixture
@@ -16,7 +21,8 @@ def hook(aws):
     spec = importlib.util.spec_from_file_location("th_hook", HANDLER)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
-    db.tbl("sessions").put_item(Item={"pk": "S#" + SESSION, "household_id": HH, "ttl": db.now() + 1000})
+    for s in (SESSION, SESSION2):
+        db.tbl("sessions").put_item(Item={"pk": "S#" + s, "household_id": HH, "ttl": db.now() + 1000})
     db.tbl("households").put_item(Item={"household_id": HH, "elder_name": "Amma", "demo": True})
     return mod
 
@@ -26,8 +32,8 @@ def before(tool, tool_input=None, session=SESSION):
             "context": {"toolName": tool, "toolType": "agentcore_gateway", "toolInput": tool_input or {}, "toolUseId": "t1"}}
 
 
-def after(tool, text, is_error=False):
-    return {"hookEventId": "e2", "name": "h", "event": "after_tool_call", "harnessArn": "arn", "sessionId": SESSION,
+def after(tool, text, is_error=False, session=SESSION):
+    return {"hookEventId": "e2", "name": "h", "event": "after_tool_call", "harnessArn": "arn", "sessionId": session,
             "context": {"toolName": tool, "toolType": "agentcore_gateway", "toolUseId": "t1",
                         "toolResult": {"status": "error" if is_error else "success", "toolUseId": "t1",
                                        "content": [{"text": text}], "isError": is_error}}}
@@ -76,10 +82,10 @@ def test_expired_freeze_allows(hook):
     assert hook.handler(before("bank___request_new_payee"), None)["decision"] == "allow"
 
 
-def test_three_refusals_lock_session_and_alert(hook):
+def test_three_refusals_lock_household_and_alert(hook):
     for i in range(config.STRIKE_LIMIT):
         assert hook.handler(after("bank___pay_bill", REFUSED), None)["decision"] == "allow"
-    row = db.tbl("strikes").get_item(Key={"session_id": SESSION})["Item"]
+    row = strike_row()
     assert int(row["count"]) == 3 and int(row["locked_until"]) > db.now()
     alerts = db.tbl("inbox").query(KeyConditionExpression="household_id = :h", ExpressionAttributeValues={":h": HH})["Items"]
     assert len(alerts) == 1 and alerts[0]["kind"] == "alert"
@@ -100,16 +106,35 @@ def test_two_refusals_do_not_lock(hook):
     assert hook.handler(before("bank___pay_bill"), None)["decision"] == "allow"
 
 
+def test_new_chat_does_not_reset_strikes(hook):
+    # A scammer coaching the user can tell her to reload the chat. Strikes count per household, not per chat.
+    hook.handler(after("bank___pay_bill", REFUSED, session=SESSION), None)
+    hook.handler(after("bank___pay_bill", REFUSED, session=SESSION), None)
+    hook.handler(after("bank___request_new_payee", REFUSED, session=SESSION2), None)
+    assert int(strike_row()["locked_until"]) > db.now()
+    for sess in (SESSION, SESSION2):
+        out = hook.handler(before("bank___pay_bill", session=sess), None)
+        assert out["decision"] == "deny" and "paused" in out["reason"]
+
+
+def test_strikes_in_other_household_do_not_count(hook):
+    other = "hh-0ther0000000-" + "d" * 32
+    db.tbl("sessions").put_item(Item={"pk": "S#" + other, "household_id": "hh-0ther0000000", "ttl": db.now() + 1000})
+    for _ in range(config.STRIKE_LIMIT):
+        hook.handler(after("bank___pay_bill", REFUSED, session=other), None)
+    assert hook.handler(before("bank___pay_bill"), None)["decision"] == "allow"
+
+
 def test_success_and_other_tools_do_not_count(hook):
     hook.handler(after("bank___pay_bill", json.dumps({"status": "paid"})), None)
     hook.handler(after("bank___list_bills", REFUSED), None)
-    assert db.tbl("strikes").get_item(Key={"session_id": SESSION}).get("Item") is None
+    assert strike_row() is None
 
 
 def test_policy_denied_and_error_count_as_strikes(hook):
     hook.handler(after("bank___request_new_payee", "Tool Execution Denied: Tool call not allowed due to policy enforcement [x]", True), None)
     hook.handler(after("bank___pay_bill", "boom", True), None)
-    assert int(db.tbl("strikes").get_item(Key={"session_id": SESSION})["Item"]["count"]) == 2
+    assert int(strike_row()["count"]) == 2
 
 
 def test_after_never_denies_on_internal_error(hook, monkeypatch):

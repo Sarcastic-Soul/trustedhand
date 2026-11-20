@@ -151,7 +151,7 @@
     R9: 'If the chat shows scam signs, the household is frozen for new payees and transfers, Amma is told calmly, and Ravi is alerted. Known bills stay payable.',
     R10: 'The agent cannot change limits, approve requests, lift a freeze or edit payees. No tool exists for any of these.',
     R11: 'Rate limits per session, per IP and a global daily cap on agent runs.',
-    R12: 'After 3 refused payment attempts in one chat, payments and new requests lock for 30 minutes and Ravi is alerted.'
+    R12: 'After 3 refused payment attempts in a day, across all chats, payments and new requests lock for 30 minutes and Ravi is alerted.'
   };
   var LAYERS = [
     ['proxy', 'Chat proxy', 'L0'],
