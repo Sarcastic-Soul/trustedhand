@@ -1,0 +1,14 @@
+[project]
+name = "trustedhand"
+version = "0.1.0"
+description = "Bill-pay agent for an older parent that holds even when the person typing is coached by a scammer."
+requires-python = ">=3.13"
+license = "Apache-2.0"
+dependencies = ["boto3>=1.44"]
+
+[dependency-groups]
+dev = ["pytest>=8", "moto[dynamodb]>=5.1", "botocore[crt]"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src", "."]
+testpaths = ["tests"]

@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="referrer" content="no-referrer">
+  <title>TrustedHand live demo</title>
+  <meta name="description" content="A bill-pay chat agent for an older parent that keeps working when a scammer is coaching her. Try to make it pay a scammer.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231d5c46'/%3E%3Cpath d='M9 16.5l5 5 9-11' fill='none' stroke='%23f8f5ec' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css">
+  <link rel="stylesheet" href="app.css">
+  <script src="config.js"></script>
+  <script src="common.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body class="page-app">
+  <header class="topbar">
+    <a class="brand" href="./"><i class="ph ph-shield-check" aria-hidden="true"></i>TrustedHand</a>
+    <p class="tagline">A bill-pay agent that keeps working when a scammer is on the phone.</p>
+    <nav class="topnav" aria-label="Site">
+      <a class="toplink" href="about.html">How it works</a>
+      <button type="button" class="btn btn-quiet" id="restart" hidden><i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i>New demo</button>
+    </nav>
+  </header>
+
+  <noscript><p style="padding:24px">This demo needs JavaScript.</p></noscript>
+
+  <!-- Start screen -->
+  <main class="start" id="start">
+    <div class="start-grid">
+      <div>
+        <h1>Try to make Amma&rsquo;s bill-pay agent pay a scammer.</h1>
+        <p class="lede">Amma pays her household bills by chat. In the &ldquo;digital arrest&rdquo; scam, a fake officer coaches her on a video call to move her savings to a &ldquo;safe account&rdquo;. This agent has to keep paying real bills while that happens. You play the scammer.</p>
+        <div class="start-actions">
+          <button type="button" class="btn btn-primary btn-lg" id="start-btn"><i class="ph ph-play" aria-hidden="true"></i>Start a demo household</button>
+          <p class="start-err" id="start-err" role="alert"></p>
+          <p class="start-fine">The money is simulated. Everything else runs on AWS. Demo data is deleted after 48 hours.</p>
+        </div>
+      </div>
+      <ol class="steps" aria-label="What you will see">
+        <li><h2>Amma&rsquo;s phone</h2><p>Chat as Amma, or as the scammer coaching her. Pick a ready-made attack, or type your own.</p></li>
+        <li><h2>Ravi&rsquo;s phone</h2><p>Her son gets the alerts and the requests to approve a new payee, through his own one-time link.</p></li>
+        <li><h2>Under the hood</h2><p>Every layer writes a receipt. See which rule stopped what, and where.</p></li>
+      </ol>
+    </div>
+  </main>
+
+  <!-- Live demo -->
+  <div class="app" id="app" data-tab="amma" hidden>
+
+    <section class="panel" id="p-amma" aria-labelledby="h-amma">
+      <div class="panel-head"><h2 id="h-amma">Amma&rsquo;s phone</h2><p>Bill-pay chat</p></div>
+      <div class="banner" id="frozen" role="status" hidden>
+        <i class="ph ph-lock-key" aria-hidden="true"></i>
+        <div><strong>Frozen for new payees and transfers</strong><span id="frozen-text">Known bills can still be paid. Ravi has been told.</span></div>
+      </div>
+      <div class="chatlog" id="log" role="log" aria-live="polite" aria-relevant="additions" aria-label="Chat with Amma's bill-pay agent" tabindex="0"></div>
+      <div class="tries">
+        <div class="tries-row">
+          <p class="tries-label scam"><i class="ph ph-warning" aria-hidden="true"></i>Try a scam</p>
+          <div class="chips" id="chips-scam"></div>
+        </div>
+        <div class="tries-row">
+          <p class="tries-label">Normal use</p>
+          <div class="chips" id="chips-ok"></div>
+        </div>
+      </div>
+      <form class="composer" id="composer" autocomplete="off">
+        <label class="sr-only" for="msg">Message to the bill-pay agent</label>
+        <textarea id="msg" rows="1" maxlength="1000" placeholder="Message the agent"></textarea>
+        <button type="submit" class="btn btn-primary" id="send"><i class="ph ph-paper-plane-tilt" aria-hidden="true"></i>Send</button>
+      </form>
+    </section>
+
+    <section class="panel" id="p-ravi" aria-labelledby="h-ravi">
+      <div class="panel-head"><h2 id="h-ravi">Ravi&rsquo;s phone</h2><p>Trusted contact</p></div>
+      <p class="note"><i class="ph ph-device-mobile" aria-hidden="true"></i><span>In real use this arrives on Ravi&rsquo;s own phone, as a one-time link. It is shown here so you can watch it happen.</span></p>
+      <p class="poll-note" id="poll-note" role="status" hidden></p>
+      <div class="panel-body">
+        <ul class="inbox" id="inbox" aria-label="Ravi's inbox"></ul>
+      </div>
+    </section>
+
+    <section class="panel" id="p-hood" aria-labelledby="h-hood">
+      <div class="panel-head"><h2 id="h-hood">Under the hood</h2><p>Every layer writes a receipt</p></div>
+      <div class="panel-body" id="hood-body">
+        <div class="hood-top">
+          <div class="spend">
+            <div class="spend-row"><span class="label">Spent today</span><span class="big" id="spend-big">&rarr;</span></div>
+            <div class="meter" id="meter" role="meter" aria-label="Spent today against the daily limit" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span style="width:0%"></span></div>
+            <p class="meter-note" id="meter-note"></p>
+          </div>
+        </div>
+        <details class="mini" id="d-bills"><summary><i class="ph ph-receipt" aria-hidden="true"></i>Bills <span class="count" id="n-bills"></span><i class="ph ph-caret-right chev" aria-hidden="true"></i></summary><ul id="l-bills"></ul></details>
+        <details class="mini" id="d-payees"><summary><i class="ph ph-users" aria-hidden="true"></i>Approved payees <span class="count" id="n-payees"></span><i class="ph ph-caret-right chev" aria-hidden="true"></i></summary><ul id="l-payees"></ul></details>
+        <div class="filters" id="filters">
+          <div class="filters-top"><h3>Receipts, newest first</h3><span class="tally" id="tally"></span><button type="button" class="fchip only" id="only-btn" data-only="1" aria-pressed="false">Stops and flags only</button></div>
+          <div class="chips" id="filter-layers" role="group" aria-label="Filter receipts by layer"></div>
+        </div>
+        <ul class="rcs" id="rcs" aria-label="Receipts"></ul>
+      </div>
+    </section>
+  </div>
+
+  <nav class="tabbar" id="tabbar" role="tablist" aria-label="Panels" hidden>
+    <button type="button" class="tab" role="tab" id="tab-amma" data-tab="amma" aria-selected="true" aria-controls="p-amma"><i class="ph ph-chat-circle-text" aria-hidden="true"></i>Amma</button>
+    <button type="button" class="tab" role="tab" id="tab-ravi" data-tab="ravi" aria-selected="false" aria-controls="p-ravi" tabindex="-1"><i class="ph ph-bell" aria-hidden="true"></i>Ravi<span class="badge" id="badge-ravi" hidden></span></button>
+    <button type="button" class="tab" role="tab" id="tab-hood" data-tab="hood" aria-selected="false" aria-controls="p-hood" tabindex="-1"><i class="ph ph-stack" aria-hidden="true"></i>Under the hood</button>
+  </nav>
+
+  <dialog id="expired" aria-labelledby="expired-h">
+    <h2 id="expired-h">This demo has expired</h2>
+    <p>Demo households are deleted after 48 hours, or the link to it is no longer valid. Start a new one to keep going.</p>
+    <button type="button" class="btn btn-primary" id="expired-btn">Start a new demo</button>
+  </dialog>
+</body>
+</html>

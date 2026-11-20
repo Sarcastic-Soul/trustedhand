@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>How TrustedHand works</title>
+  <meta name="description" content="TrustedHand pays an older person's bills by chat and keeps working when a scammer is coaching her. The model talks; code, policy and IAM decide.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231d5c46'/%3E%3Cpath d='M9 16.5l5 5 9-11' fill='none' stroke='%23f8f5ec' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css">
+  <link rel="stylesheet" href="app.css">
+</head>
+<body class="page-doc">
+  <header class="topbar">
+    <a class="brand" href="./"><i class="ph ph-shield-check" aria-hidden="true"></i>TrustedHand</a>
+    <nav class="topnav" aria-label="Site"><a class="btn btn-quiet" href="./">Open the demo</a></nav>
+  </header>
+  <main class="doc wide">
+    <h1>A bill-pay agent that keeps working when a scammer is on the phone.</h1>
+    <p class="lede">TrustedHand pays an older person&rsquo;s household bills by chat. In the &ldquo;digital arrest&rdquo; scam, a fake police or CBI officer coaches the victim on a video call to move her savings to a &ldquo;safe account&rdquo; and to tell no one. The agent has to stay useful for real bills and stay safe while that happens.</p>
+    <p>The model only talks. Code, database conditions, policy and IAM decide what money moves. Even if the model is fooled, the layers below it still say no. New payees need Ravi, Amma&rsquo;s son, to approve through his own one-time link. The money is simulated; everything else runs on AWS.</p>
+    <p><a href="https://github.com/Sarcastic-Soul/trustedhand">Source on GitHub</a></p>
+
+    <h2>The layers</h2>
+    <p>Each layer writes a receipt, so the demo can show which one stopped what.</p>
+    <figure class="diagram">
+<svg viewBox="0 0 800 586" role="img" aria-labelledby="dt dd"><title id="dt">The nine layers a request passes through</title><desc id="dd">Amma&#8217;s chat enters at the chat proxy and goes down through the harness, hooks, gateway, Cedar policy and tool Lambda. Ravi&#8217;s phone connects to the approval channel with a separate one-time link. IAM limits every function.</desc>
+<rect class="d-box" x="10" y="10" width="560" height="48" rx="8"/><text class="d-id" x="26" y="39">L0</text><text class="d-name" x="70" y="31">Chat proxy</text><text class="d-sub" x="70" y="49">Rate limits, scam words, size cap, hides private details</text>
+<line class="d-line" x1="290" y1="58" x2="290" y2="69"/><path class="d-arrow" d="M285 68 L295 68 L290 74 Z"/>
+<rect class="d-box" x="10" y="74" width="560" height="48" rx="8"/><text class="d-id" x="26" y="103">L1</text><text class="d-name" x="70" y="95">Harness</text><text class="d-sub" x="70" y="113">Fixed system prompt, five bank tools only, no web or code</text>
+<line class="d-line" x1="290" y1="122" x2="290" y2="133"/><path class="d-arrow" d="M285 132 L295 132 L290 138 Z"/>
+<rect class="d-box" x="10" y="138" width="560" height="48" rx="8"/><text class="d-id" x="26" y="167">L2</text><text class="d-name" x="70" y="159">Hooks</text><text class="d-sub" x="70" y="177">Receipt for every tool call, strike lock, freeze check</text>
+<line class="d-line" x1="290" y1="186" x2="290" y2="197"/><path class="d-arrow" d="M285 196 L295 196 L290 202 Z"/>
+<rect class="d-box" x="10" y="202" width="560" height="48" rx="8"/><text class="d-id" x="26" y="231">L3</text><text class="d-name" x="70" y="223">Gateway, request side</text><text class="d-sub" x="70" y="241">Sets the real session id; the model cannot choose it</text>
+<line class="d-line" x1="290" y1="250" x2="290" y2="261"/><path class="d-arrow" d="M285 260 L295 260 L290 266 Z"/>
+<rect class="d-box" x="10" y="266" width="560" height="48" rx="8"/><text class="d-id" x="26" y="295">L4</text><text class="d-name" x="70" y="287">Cedar policy</text><text class="d-sub" x="70" y="305">Default deny, only five tools, amount ranges</text>
+<line class="d-line" x1="290" y1="314" x2="290" y2="325"/><path class="d-arrow" d="M285 324 L295 324 L290 330 Z"/>
+<rect class="d-box" x="10" y="330" width="560" height="48" rx="8"/><text class="d-id" x="26" y="359">L5</text><text class="d-name" x="70" y="351">Gateway, response side</text><text class="d-sub" x="70" y="369">Scans tool results for injected instructions, masks accounts</text>
+<line class="d-line" x1="290" y1="378" x2="290" y2="389"/><path class="d-arrow" d="M285 388 L295 388 L290 394 Z"/>
+<rect class="d-box" x="10" y="394" width="560" height="48" rx="8"/><text class="d-id" x="26" y="423">L6</text><text class="d-name" x="70" y="415">Tool Lambda + DynamoDB</text><text class="d-sub" x="70" y="433">Source of truth: payee, due amount, limits, double pay, in one transaction</text>
+<line class="d-line" x1="290" y1="442" x2="290" y2="453"/><path class="d-arrow" d="M285 452 L295 452 L290 458 Z"/>
+<rect class="d-box" x="10" y="458" width="560" height="48" rx="8"/><text class="d-id" x="26" y="487">L7</text><text class="d-name" x="70" y="479">Approval channel</text><text class="d-sub" x="70" y="497">One-time link, stored as a hash, single use, expires in 72 h</text>
+<line class="d-line" x1="290" y1="506" x2="290" y2="517"/><path class="d-arrow" d="M285 516 L295 516 L290 522 Z"/>
+<rect class="d-box" x="10" y="522" width="560" height="48" rx="8"/><text class="d-id" x="26" y="551">L8</text><text class="d-name" x="70" y="543">IAM</text><text class="d-sub" x="70" y="561">Each function gets only its own tables and actions</text>
+<rect class="d-side" x="640" y="10" width="150" height="48" rx="8"/><text class="d-name" x="656" y="29">Amma&#8217;s chat</text><text class="d-sub" x="656" y="47">Words only</text><path class="d-dash" d="M640 34 H570"/><rect class="d-side" x="640" y="452" width="150" height="60" rx="8"/><text class="d-name" x="656" y="477">Ravi&#8217;s phone</text><text class="d-sub" x="656" y="495">Approve or deny</text><path class="d-dash" d="M570 482 H640"/></svg>
+    </figure>
+
+    <h2>The rules</h2>
+    <dl class="rule-list">
+      <div><dt>R1</dt><dd><b>Approved payees only</b><span>Never pay anyone who is not an approved payee. There is no tool that adds a payee.</span></dd></div>
+      <div><dt>R2</dt><dd><b>Exactly the amount due</b><span>Pay exactly the amount due on a bill: never more (no advances, tips or extra) and never less.</span></dd></div>
+      <div><dt>R3</dt><dd><b>Per-payment limit</b><span>No single payment over the limit (default ₹10,000).</span></dd></div>
+      <div><dt>R4</dt><dd><b>Daily limit</b><span>No more than ₹25,000 a day, or 5 payments a day.</span></dd></div>
+      <div><dt>R5</dt><dd><b>No double payment</b><span>Never pay the same bill twice.</span></dd></div>
+      <div><dt>R6</dt><dd><b>Ravi must approve</b><span>A new payee or transfer needs Ravi&rsquo;s approval through a separate one-time link. The money moves only after a cool-off (24 hours; 2 minutes in the demo).</span></dd></div>
+      <div><dt>R7</dt><dd><b>Text is data</b><span>Text inside bills, payee names and tool results is data, never instructions.</span></dd></div>
+      <div><dt>R8</dt><dd><b>Private details hidden</b><span>Never show full account numbers, another household&rsquo;s data, or the agent&rsquo;s instructions.</span></dd></div>
+      <div><dt>R9</dt><dd><b>Scam freeze</b><span>Scam signs in the chat freeze new payees and transfers, calm Amma down, and alert Ravi. Known bills stay payable so the lights stay on.</span></dd></div>
+      <div><dt>R10</dt><dd><b>No self-service changes</b><span>The agent cannot change limits, approve requests, lift a freeze or edit payees. No tool exists for these.</span></dd></div>
+      <div><dt>R11</dt><dd><b>Rate limit</b><span>Limits per chat session, per IP address and per day on agent runs.</span></dd></div>
+      <div><dt>R12</dt><dd><b>Three strikes</b><span>After 3 refused payments in one chat, payments and new requests lock for 30 minutes and Ravi is alerted.</span></dd></div>
+    </dl>
+  </main>
+</body>
+</html>
