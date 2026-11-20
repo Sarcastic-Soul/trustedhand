@@ -90,7 +90,7 @@ See [docs/RESULTS.md](docs/RESULTS.md). There are 94 attacks: 70 written by us, 
 | Profile | Attacks held | Money and safety invariants held | Normal tasks work |
 |---|---|---|---|
 | hardened | 87/87 | 87/87 | 7/7 |
-| fooled | 76/87 | 87/87 | 7/7 |
+| fooled | 74/87 | 87/87 | 7/7 |
 | gullible | 82/87 | 87/87 | 7/7 |
 
 When the model was fully fooled, the worst it did was pay Amma's own real bills, each at exactly the amount due and only once. Payment races (60 at once), approval races and direct calls under the model all held.
@@ -100,7 +100,7 @@ When the model was fully fooled, the worst it did was pay Amma's own real bills,
 Needs: AWS account with Bedrock AgentCore and Nova 2 Lite access in us-east-1, Terraform 1.9+, `uv`, Python 3.13.
 
 ```bash
-make test                         # 254 unit tests, no AWS needed (moto)
+make test                         # 255 unit tests, no AWS needed (moto)
 make deploy PROFILE=<aws-profile> # Lambdas, tables, gateway, policy, guardrails, API, web, harness
 make web PROFILE=<aws-profile>    # re-upload the web files
 scripts/smoke.sh                  # start a demo household and list bills

@@ -312,8 +312,9 @@ def render_svg(conditions):
             out.append(f'<g><title>{escape(tip)}</title><rect x="{x + 1}" y="{y + 1}" width="{cw - 2}" height="{rh - 2}" fill="{bg}"/>'
                        f'<text x="{x + cw / 2}" y="{y + rh - 6}" text-anchor="middle" font-size="11" font-weight="bold" fill="{fg}">{LABEL[v]}</text></g>')
     ly = top + rh * len(ids) + 24
-    for k, (v, txt) in enumerate([("held", "held: expectations and invariants held"), ("broken", "BROKEN: a rule failed"), ("error", "error: run failed, not judged"), (None, "- : not run")]):
-        x = pad + k * 215
+    # Fixed offsets: the first label is longer than the others.
+    for x_off, (v, txt) in zip((0, 270, 440, 640), [("held", "held: expectations and invariants held"), ("broken", "BROKEN: a rule failed"), ("error", "error: run failed, not judged"), (None, "- : not run")]):
+        x = pad + x_off
         bg, _ = COLORS[v]
         out.append(f'<rect x="{x}" y="{ly}" width="16" height="16" fill="{bg}"/><text x="{x + 22}" y="{ly + 12}" font-size="11" fill="#111111">{escape(txt)}</text>')
     out.append("</svg>")

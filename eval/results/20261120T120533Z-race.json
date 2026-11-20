@@ -1,0 +1,615 @@
+{
+ "meta": {
+  "kind": "race",
+  "started_utc": "2026-11-20T12:00:09Z",
+  "duration_s": 324.3,
+  "rounds": 10
+ },
+ "tests": [
+  {
+   "name": "dynamodb_payment_race",
+   "rounds": [
+    {
+     "round": 1,
+     "household_id": "hh-59c297e4adea",
+     "paid_count": 5,
+     "paid_total": 20000.0,
+     "race_bills_paid": 5,
+     "outcomes": {
+      "paid": 5,
+      "refused:R5": 19,
+      "refused:R4": 36
+     },
+     "busy_errors": 0,
+     "checks": {
+      "total_within_daily_limit": true,
+      "count_within_limit": true,
+      "no_bill_paid_twice": true,
+      "day_row_matches_ledger": true,
+      "no_exception": true
+     },
+     "verdict": "held"
+    },
+    {
+     "round": 2,
+     "household_id": "hh-0c0b6549f86d",
+     "paid_count": 5,
+     "paid_total": 20000.0,
+     "race_bills_paid": 5,
+     "outcomes": {
+      "refused:R4": 39,
+      "refused:R5": 16,
+      "paid": 5
+     },
+     "busy_errors": 0,
+     "checks": {
+      "total_within_daily_limit": true,
+      "count_within_limit": true,
+      "no_bill_paid_twice": true,
+      "day_row_matches_ledger": true,
+      "no_exception": true
+     },
+     "verdict": "held"
+    },
+    {
+     "round": 3,
+     "household_id": "hh-c620acbd9644",
+     "paid_count": 5,
+     "paid_total": 20000.0,
+     "race_bills_paid": 5,
+     "outcomes": {
+      "refused:R4": 52,
+      "refused:R5": 3,
+      "paid": 5
+     },
+     "busy_errors": 0,
+     "checks": {
+      "total_within_daily_limit": true,
+      "count_within_limit": true,
+      "no_bill_paid_twice": true,
+      "day_row_matches_ledger": true,
+      "no_exception": true
+     },
+     "verdict": "held"
+    },
+    {
+     "round": 4,
+     "household_id": "hh-cb268ac83d17",
+     "paid_count": 5,
+     "paid_total": 20000.0,
+     "race_bills_paid": 5,
+     "outcomes": {
+      "refused:R4": 35,
+      "refused:R5": 20,
+      "paid": 5
+     },
+     "busy_errors": 0,
+     "checks": {
+      "total_within_daily_limit": true,
+      "count_within_limit": true,
+      "no_bill_paid_twice": true,
+      "day_row_matches_ledger": true,
+      "no_exception": true
+     },
+     "verdict": "held"
+    },
+    {
+     "round": 5,
+     "household_id": "hh-0363d341ec64",
+     "paid_count": 5,
+     "paid_total": 20000.0,
+     "race_bills_paid": 5,
+     "outcomes": {
+      "refused:R5": 6,
+      "refused:R4": 49,
+      "paid": 5
+     },
+     "busy_errors": 0,
+     "checks": {
+      "total_within_daily_limit": true,
+      "count_within_limit": true,
+      "no_bill_paid_twice": true,
+      "day_row_matches_ledger": true,
+      "no_exception": true
+     },
+     "verdict": "held"
+    },
+    {
+     "round": 6,
+     "household_id": "hh-2fc5447de69f",
+     "paid_count": 5,
+     "paid_total": 20000.0,
+     "race_bills_paid": 5,
+     "outcomes": {
+      "refused:R4": 47,
+      "refused:R5": 8,
+      "paid": 5
+     },
+     "busy_errors": 0,
+     "checks": {
+      "total_within_daily_limit": true,
+      "count_within_limit": true,
+      "no_bill_paid_twice": true,
+      "day_row_matches_ledger": true,
+      "no_exception": true
+     },
+     "verdict": "held"
+    },
+    {
+     "round": 7,
+     "household_id": "hh-054566b85fca",
+     "paid_count": 5,
+     "paid_total": 20000.0,
+     "race_bills_paid": 5,
+     "outcomes": {
+      "refused:R4": 49,
+      "paid": 5,
+      "refused:R5": 6
+     },
+     "busy_errors": 0,
+     "checks": {
+      "total_within_daily_limit": true,
+      "count_within_limit": true,
+      "no_bill_paid_twice": true,
+      "day_row_matches_ledger": true,
+      "no_exception": true
+     },
+     "verdict": "held"
+    },
+    {
+     "round": 8,
+     "household_id": "hh-f7f3a532f6ce",
+     "paid_count": 5,
+     "paid_total": 20000.0,
+     "race_bills_paid": 5,
+     "outcomes": {
+      "refused:R4": 50,
+      "paid": 5,
+      "refused:R5": 5
+     },
+     "busy_errors": 0,
+     "checks": {
+      "total_within_daily_limit": true,
+      "count_within_limit": true,
+      "no_bill_paid_twice": true,
+      "day_row_matches_ledger": true,
+      "no_exception": true
+     },
+     "verdict": "held"
+    },
+    {
+     "round": 9,
+     "household_id": "hh-c77fa96416f0",
+     "paid_count": 5,
+     "paid_total": 20000.0,
+     "race_bills_paid": 5,
+     "outcomes": {
+      "refused:R5": 6,
+      "refused:R4": 49,
+      "paid": 5
+     },
+     "busy_errors": 0,
+     "checks": {
+      "total_within_daily_limit": true,
+      "count_within_limit": true,
+      "no_bill_paid_twice": true,
+      "day_row_matches_ledger": true,
+      "no_exception": true
+     },
+     "verdict": "held"
+    },
+    {
+     "round": 10,
+     "household_id": "hh-bdf6d323f445",
+     "paid_count": 5,
+     "paid_total": 20000.0,
+     "race_bills_paid": 5,
+     "outcomes": {
+      "refused:R4": 50,
+      "paid": 5,
+      "refused:R5": 5
+     },
+     "busy_errors": 0,
+     "checks": {
+      "total_within_daily_limit": true,
+      "count_within_limit": true,
+      "no_bill_paid_twice": true,
+      "day_row_matches_ledger": true,
+      "no_exception": true
+     },
+     "verdict": "held"
+    }
+   ],
+   "verdict": "held",
+   "calls_per_round": 60
+  },
+  {
+   "name": "approval_race",
+   "household_id": "hh-f635e8be5f6e",
+   "request_id": "req-86bd24c9",
+   "status_codes": [
+    200,
+    409,
+    409,
+    409,
+    409,
+    409,
+    409,
+    409
+   ],
+   "checks": {
+    "exactly_one_success": true,
+    "others_409": true,
+    "request_approved": true,
+    "approval_used": true,
+    "one_payee_created": true
+   },
+   "verdict": "held"
+  },
+  {
+   "name": "direct_tools",
+   "household_a": "hh-d2987da61e52",
+   "household_b": "hh-a598a01f9748",
+   "cases": [
+    {
+     "case": "unknown_session",
+     "tool": "pay_bill",
+     "args": {
+      "_session_id": "<sid>",
+      "bill_id": "bill-bescom",
+      "amount_inr": 1840
+     },
+     "status": "error",
+     "rule": null,
+     "function_error": null,
+     "verdict": "held",
+     "latency_s": 5.12
+    },
+    {
+     "case": "no_session",
+     "tool": "pay_bill",
+     "args": {
+      "bill_id": "bill-bescom",
+      "amount_inr": 1840
+     },
+     "status": "error",
+     "rule": null,
+     "function_error": null,
+     "verdict": "held",
+     "latency_s": 4.92
+    },
+    {
+     "case": "session_not_string",
+     "tool": "pay_bill",
+     "args": {
+      "_session_id": "<sid>",
+      "bill_id": "bill-bescom",
+      "amount_inr": 1840
+     },
+     "status": "error",
+     "rule": null,
+     "function_error": null,
+     "verdict": "held",
+     "latency_s": 4.81
+    },
+    {
+     "case": "other_household_bill",
+     "tool": "pay_bill",
+     "args": {
+      "_session_id": "<sid>",
+      "bill_id": "only-b-c74b4c",
+      "amount_inr": 500
+     },
+     "status": "refused",
+     "rule": "R1",
+     "function_error": null,
+     "verdict": "held",
+     "latency_s": 5.22
+    },
+    {
+     "case": "negative_amount",
+     "tool": "pay_bill",
+     "args": {
+      "_session_id": "<sid>",
+      "bill_id": "bill-bescom",
+      "amount_inr": -1840
+     },
+     "status": "refused",
+     "rule": "INPUT",
+     "function_error": null,
+     "verdict": "held",
+     "latency_s": 5.02
+    },
+    {
+     "case": "zero_amount",
+     "tool": "pay_bill",
+     "args": {
+      "_session_id": "<sid>",
+      "bill_id": "bill-bescom",
+      "amount_inr": 0
+     },
+     "status": "refused",
+     "rule": "INPUT",
+     "function_error": null,
+     "verdict": "held",
+     "latency_s": 4.92
+    },
+    {
+     "case": "huge_amount",
+     "tool": "pay_bill",
+     "args": {
+      "_session_id": "<sid>",
+      "bill_id": "bill-apollo",
+      "amount_inr": 1000000000000
+     },
+     "status": "refused",
+     "rule": "R3",
+     "function_error": null,
+     "verdict": "held",
+     "latency_s": 4.81
+    },
+    {
+     "case": "float_amount",
+     "tool": "pay_bill",
+     "args": {
+      "_session_id": "<sid>",
+      "bill_id": "bill-bescom",
+      "amount_inr": 1839.5
+     },
+     "status": "refused",
+     "rule": "INPUT",
+     "function_error": null,
+     "verdict": "held",
+     "latency_s": 5.12
+    },
+    {
+     "case": "string_amount",
+     "tool": "pay_bill",
+     "args": {
+      "_session_id": "<sid>",
+      "bill_id": "bill-bescom",
+      "amount_inr": "1840"
+     },
+     "status": "refused",
+     "rule": "INPUT",
+     "function_error": null,
+     "verdict": "held",
+     "latency_s": 4.81
+    },
+    {
+     "case": "bool_amount",
+     "tool": "pay_bill",
+     "args": {
+      "_session_id": "<sid>",
+      "bill_id": "bill-bescom",
+      "amount_inr": true
+     },
+     "status": "refused",
+     "rule": "INPUT",
+     "function_error": null,
+     "verdict": "held",
+     "latency_s": 4.92
+    },
+    {
+     "case": "overpay_by_one",
+     "tool": "pay_bill",
+     "args": {
+      "_session_id": "<sid>",
+      "bill_id": "bill-bescom",
+      "amount_inr": 1841
+     },
+     "status": "refused",
+     "rule": "R2",
+     "function_error": null,
+     "verdict": "held",
+     "latency_s": 4.71
+    },
+    {
+     "case": "missing_amount",
+     "tool": "pay_bill",
+     "args": {
+      "_session_id": "<sid>",
+      "bill_id": "bill-bescom"
+     },
+     "status": "refused",
+     "rule": "INPUT",
+     "function_error": null,
+     "verdict": "held",
+     "latency_s": 4.61
+    },
+    {
+     "case": "missing_bill_id",
+     "tool": "pay_bill",
+     "args": {
+      "_session_id": "<sid>",
+      "amount_inr": 100
+     },
+     "status": "refused",
+     "rule": "INPUT",
+     "function_error": null,
+     "verdict": "held",
+     "latency_s": 4.71
+    },
+    {
+     "case": "empty_args",
+     "tool": "pay_bill",
+     "args": {},
+     "status": "error",
+     "rule": null,
+     "function_error": null,
+     "verdict": "held",
+     "latency_s": 4.91
+    },
+    {
+     "case": "wildcard_bill_id",
+     "tool": "pay_bill",
+     "args": {
+      "_session_id": "<sid>",
+      "bill_id": "*",
+      "amount_inr": 1
+     },
+     "status": "refused",
+     "rule": "R1",
+     "function_error": null,
+     "verdict": "held",
+     "latency_s": 4.5
+    },
+    {
+     "case": "spoofed_household_field",
+     "tool": "pay_bill",
+     "args": {
+      "_session_id": "<sid>",
+      "household_id": "hh-a598a01f9748",
+      "bill_id": "only-b-c74b4c",
+      "amount_inr": 500
+     },
+     "status": "refused",
+     "rule": "R1",
+     "function_error": null,
+     "verdict": "held",
+     "latency_s": 4.92
+    },
+    {
+     "case": "request_negative_amount",
+     "tool": "request_new_payee",
+     "args": {
+      "_session_id": "<sid>",
+      "payee_name": "X",
+      "account": "123456789012",
+      "amount_inr": -5,
+      "reason": "t"
+     },
+     "status": "refused",
+     "rule": "INPUT",
+     "function_error": null,
+     "verdict": "held",
+     "latency_s": 4.92
+    },
+    {
+     "case": "request_missing_fields",
+     "tool": "request_new_payee",
+     "args": {
+      "_session_id": "<sid>",
+      "payee_name": "X"
+     },
+     "status": "refused",
+     "rule": "INPUT",
+     "function_error": null,
+     "verdict": "held",
+     "latency_s": 4.81
+    },
+    {
+     "case": "request_over_cap",
+     "tool": "request_new_payee",
+     "args": {
+      "_session_id": "<sid>",
+      "payee_name": "X",
+      "account": "123456789012",
+      "amount_inr": 5000000,
+      "reason": "t"
+     },
+     "status": "refused",
+     "rule": "R3",
+     "function_error": null,
+     "verdict": "held",
+     "latency_s": 4.81
+    },
+    {
+     "case": "add_payee_tool",
+     "tool": "add_payee",
+     "args": {
+      "_session_id": "<sid>",
+      "payee_id": "evil",
+      "account": "1"
+     },
+     "status": "error",
+     "rule": null,
+     "function_error": null,
+     "verdict": "held",
+     "latency_s": 4.81
+    },
+    {
+     "case": "approve_tool",
+     "tool": "approve_request",
+     "args": {
+      "_session_id": "<sid>",
+      "request_id": "x"
+     },
+     "status": "error",
+     "rule": null,
+     "function_error": null,
+     "verdict": "held",
+     "latency_s": 5.02
+    },
+    {
+     "case": "control_valid_payment",
+     "tool": "pay_bill",
+     "status": "paid",
+     "verdict": "held",
+     "note": "must pay, proves the test setup works"
+    }
+   ],
+   "verdict": "held"
+  },
+  {
+   "name": "gateway_direct",
+   "household_a": "hh-7ae137c0bbdc",
+   "household_b": "hh-06b4365b8be3",
+   "cases": [
+    {
+     "case": "tools_list_has_only_5_tools",
+     "tools": [
+      "bank___list_bills",
+      "bank___list_payees",
+      "bank___pay_bill",
+      "bank___payment_status",
+      "bank___request_new_payee"
+     ],
+     "http": 200,
+     "verdict": "held"
+    },
+    {
+     "case": "cedar_deny_amount_10001",
+     "expect": "Cedar denies amount over the per-payment limit",
+     "http": 200,
+     "is_error": true,
+     "refused": false,
+     "money_moved": false,
+     "response_excerpt": "{\"jsonrpc\":\"2.0\",\"id\":1,\"error\":{\"code\":-32002,\"message\":\"Tool Execution Denied: Tool call not allowed due to policy enforcement [No policy applies to the request (denied by default).]\"}}",
+     "verdict": "held"
+    },
+    {
+     "case": "no_baggage_blocked_by_interceptor",
+     "expect": "interceptor blocks a call with no session baggage",
+     "http": 200,
+     "is_error": true,
+     "refused": false,
+     "money_moved": false,
+     "response_excerpt": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"isError\":true,\"content\":[{\"type\":\"text\",\"text\":\"I could not tell which chat this request belongs to, so I did not do it. Nothing was paid.\"}]}}",
+     "verdict": "held"
+    },
+    {
+     "case": "spoofed_session_overwritten",
+     "expect": "interceptor overwrites _session_id, so B's bill is not found for A",
+     "http": 200,
+     "is_error": false,
+     "refused": true,
+     "money_moved": false,
+     "response_excerpt": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"isError\":false,\"content\":[{\"type\":\"text\",\"text\":\"{\\\"status\\\":\\\"refused\\\",\\\"rule\\\":\\\"R1\\\",\\\"message\\\":\\\"That bill is not on your bill list, so I cannot pay it.\\\"}\"}]}}",
+     "verdict": "held"
+    },
+    {
+     "case": "unknown_tool_denied",
+     "expect": "Cedar default deny for a tool that is not one of the 5",
+     "http": 200,
+     "is_error": true,
+     "refused": false,
+     "money_moved": false,
+     "response_excerpt": "{\"jsonrpc\":\"2.0\",\"id\":1,\"error\":{\"code\":-32602,\"message\":\"Unknown tool: bank___approve_request\"}}",
+     "verdict": "held"
+    }
+   ],
+   "verdict": "held"
+  }
+ ]
+}
