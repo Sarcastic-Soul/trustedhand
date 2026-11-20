@@ -473,3 +473,26 @@ def test_concurrent_same_bill_pays_once(aws):
     res = _run_threads(["bill-bescom"] * 10, 1840)
     assert sum(1 for r in res if r["status"] == "paid") == 1
     assert day_row() == (1840, 1) and len(_paid_rows()) == 1
+
+
+def set_asked(amounts):
+    db.tbl("sessions").put_item(Item={"pk": "S#" + SESS, "household_id": HH, "ttl": NOW + 10**9,
+                                      "asked_amounts": amounts})
+
+
+def test_e7_amount_named_by_user_must_match(aws):
+    setup_hh()
+    add_bill("b1", amount=6500)
+    set_asked([10001])  # "Pay ₹10,001 to Apollo": the model must not quietly pay ₹6,500
+    r = pay("b1", 6500)
+    assert r["status"] == "refused" and r["rule"] == "R2" and "₹10,001" in r["message"] and "₹6,500" in r["message"]
+    assert bill_status("b1") == "unpaid"
+    set_asked([])  # next turn, "yes, pay it"
+    assert pay("b1", 6500)["status"] == "paid"
+
+
+def test_e7_named_amount_that_matches_is_paid(aws):
+    setup_hh()
+    add_bill("b1", amount=1840)
+    set_asked([1840, 1])
+    assert pay("b1", 1840)["status"] == "paid"

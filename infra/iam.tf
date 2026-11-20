@@ -45,7 +45,7 @@ locals {
     # Chat proxy. Creates demo households and seeds, sets freezes, alerts the contact.
     chat = [
       { actions = ["dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:UpdateItem"], resources = [local.tarn.households] },
-      { actions = ["dynamodb:GetItem", "dynamodb:PutItem"], resources = [local.tarn.sessions] },
+      { actions = ["dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:UpdateItem"], resources = [local.tarn.sessions] },
       { actions = concat(local.ddb_read, ["dynamodb:PutItem", "dynamodb:BatchWriteItem"]), resources = [local.tarn.payees, local.tarn.bills] },
       { actions = local.ddb_read, resources = [local.tarn.ledger, local.tarn.requests] },
       { actions = concat(local.ddb_read, ["dynamodb:PutItem"]), resources = [local.tarn.inbox, local.tarn.receipts] },

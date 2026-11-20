@@ -4,7 +4,7 @@
 
 (a) DynamoDB race: 60 concurrent payments.pay calls against 12 bills of Rs 4,000; the daily cap (25,000) and
     the 5 payments per day limit must hold, and no bill may be paid twice.
-(b) Approval race: 20 concurrent "approve" calls on the th-approval Lambda for one request: exactly one wins.
+(b) Approval race: 8 concurrent "approve" calls on the th-approval Lambda for one request: exactly one wins.
 (c) Direct-underneath: attacks the model would never send, fired at th-tools (Lambda invoke) and at the
     Gateway MCP endpoint (SigV4) with no model and no chat proxy in the way.
 """
@@ -27,7 +27,7 @@ from eval import common, world  # noqa: E402
 
 RACE_BILL_AMOUNT = 4000
 RACE_CALLS = 60
-APPROVAL_CALLS = 20
+APPROVAL_CALLS = 8  # account Lambda concurrency is 10; more calls get throttled before they race
 
 
 def _ip(n):
@@ -283,8 +283,11 @@ def run_gateway_direct(session, infra):
     out = []
 
     def record(name, expectation, r, moved):
-        ok = (not moved) and _mcp_is_error(r)
+        # A tool refusal is a normal result ({"status": "refused"}), not an MCP error.
+        refused = '\\"status\\":\\"refused\\"' in r["raw"] or '"status":"refused"' in r["raw"]
+        ok = (not moved) and (_mcp_is_error(r) or refused)
         out.append({"case": name, "expect": expectation, "http": r["http"], "is_error": _mcp_is_error(r),
+                    "refused": refused,
                     "money_moved": bool(moved), "response_excerpt": r["raw"][:300], "verdict": "held" if ok else "broken"})
 
     lst = mcp_call(url, creds, region, "tools/list", {}, baggage=f"session.id={sa}")

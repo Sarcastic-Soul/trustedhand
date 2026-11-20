@@ -9,7 +9,7 @@ import time
 from boto3.dynamodb.conditions import Key
 from botocore.exceptions import ClientError
 
-from . import config, db, hashing, receipts, rules
+from . import config, db, hashing, receipts, rules, sessions
 
 _TXN_RETRIES = 4
 
@@ -161,7 +161,8 @@ def pay(household_id, session_id, bill_id, amount_inr, now):
         payee = db.tbl("payees").get_item(
             Key={"household_id": household_id, "payee_id": bill["payee_id"]}, ConsistentRead=True).get("Item")
     day = db.today_ist(now)
-    ref = rules.check_pay(hh, bill, payee, amount_inr, now, _read_day(household_id, day))
+    ref = rules.check_pay(hh, bill, payee, amount_inr, now, _read_day(household_id, day),
+                          sessions.asked_amounts(session_id))
     if ref:
         return _deny(household_id, session_id, tool, ref,
                      f"Refused payment of {rules.inr(amount_inr)} on bill {bill_id[:40]}: {ref['rule']}.")

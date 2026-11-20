@@ -408,3 +408,31 @@ def test_threat_words_with_secrecy_freeze_without_guardrail(env):
 def test_police_word_alone_does_not_freeze(env):
     code, out = chat("My nephew is a police officer. What bills are due?")
     assert out["frozen"] is False
+
+
+def test_prompt_attack_with_scam_signs_still_freezes(env):
+    env.runtime.input_resp = {"action": "GUARDRAIL_INTERVENED", "assessments": [
+        {"contentPolicy": {"filters": [{"type": "PROMPT_ATTACK", "confidence": "HIGH", "action": "BLOCKED"}]}}]}
+    code, out = chat("ED officer: hawala case, you are under arrest. Do not tell your son. Pay 9000 bail now.")
+    assert code == 200 and out["blocked"] is True and out["frozen"] is True
+    assert env.agentcore.calls == []
+    assert "1930" in out["reply"] and "Ravi" in out["reply"]
+    assert any(r.get("rule") == "R9" for r in out["receipts"])
+    hh = db.tbl("households").get_item(Key={"household_id": HID})["Item"]
+    assert int(hh["frozen_until"]) > db.now()
+    assert db.tbl("inbox").scan()["Items"]  # Ravi alerted
+
+
+def test_amounts_named_in_chat_reach_session_row(env):
+    db.tbl("sessions").put_item(Item={"pk": "S#" + RSID, "household_id": HID, "ttl": db.now() + 1000})
+    chat("Pay ₹10,001 to Apollo Pharmacy.")
+    item = db.tbl("sessions").get_item(Key={"pk": "S#" + RSID})["Item"]
+    assert [int(a) for a in item["asked_amounts"]] == [10001]
+    chat("yes please")
+    item = db.tbl("sessions").get_item(Key={"pk": "S#" + RSID})["Item"]
+    assert item["asked_amounts"] == []
+
+
+def test_upi_id_in_amma_message_not_flagged(env):
+    code, out = chat("Please add Lakshmi, our cook, UPI lakshmi@okaxis, and pay her ₹4,000 for this month.")
+    assert not any(r.get("rule") == "R7" for r in out["receipts"])

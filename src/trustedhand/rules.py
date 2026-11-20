@@ -168,6 +168,44 @@ def check_amount_vs_due(bill, amount):  # R2
     return None
 
 
+_AMOUNT_RES = (
+    re.compile(r"(?:₹|\brs\.?|\binr)\s*([0-9][0-9,]*)(?:\.[0-9]+)?", re.I),
+    re.compile(r"\b([0-9][0-9,]*)(?:\.[0-9]+)?\s*(?:/-|rupees?\b|rs\b)", re.I),
+)
+MAX_ASKED = 10
+
+
+def asked_amounts(text):
+    """Rupee amounts the user named in a message, e.g. 'Pay Rs.12,000' -> [12000].
+
+    Only numbers with a rupee marker count, so bill ids, dates and phone numbers are ignored.
+    """
+    found = []
+    for rx in _AMOUNT_RES:
+        for m in rx.finditer(text or ""):
+            digits = m.group(1).replace(",", "")
+            if digits.isdigit() and len(digits) <= 9:
+                n = int(digits)
+                if n > 0 and n not in found:
+                    found.append(n)
+    return found[:MAX_ASKED]
+
+
+def check_asked_amount(bill, amount, asked):  # R2 / E7
+    """If the user named amounts this turn, only those can be paid.
+
+    Stops the model from quietly paying the amount due when the user asked for a
+    different amount: it must tell her and let her confirm in her own words.
+    """
+    asked = [int(a) for a in (asked or [])]
+    if asked and int(amount) not in asked:
+        due = int(bill.get("amount_due_inr") or 0)
+        named = ", ".join(inr(a) for a in asked)
+        return refuse("R2", f"You asked to pay {named}, but the amount due on this bill is {inr(due)}. "
+                            f"Nothing was paid. If you want to pay {inr(due)}, please say so.")
+    return None
+
+
 def check_per_payment(household, amount):  # R3
     lim = limits_of(household)["per_payment"]
     if amount > lim:
@@ -208,10 +246,11 @@ def check_pending_requests(pending_count):
     return None
 
 
-def check_pay(household, bill, payee, amount, now, day=None):
+def check_pay(household, bill, payee, amount, now, day=None, asked=None):
     """Run every pre-transaction pay rule in a fixed order. First refusal wins.
 
     `day` is {"spent_inr", "count"} for today (or None for nothing spent).
+    `asked` is the list of rupee amounts the user named this turn (None or empty: no limit).
     The DynamoDB transaction re-checks R4 and R5 atomically; this pass gives
     clean messages and stops obvious cases early.
     """
@@ -225,4 +264,5 @@ def check_pay(household, bill, payee, amount, now, day=None):
         or check_per_payment(household, amount)
         or check_daily(household, amount, day.get("spent_inr", 0), day.get("count", 0))
         or check_amount_vs_due(bill, amount)
+        or check_asked_amount(bill, amount, asked)
     )

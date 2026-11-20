@@ -122,7 +122,7 @@ def render_markdown(conditions, race=None, heldout_meta=None):
         m = conditions[l]["meta"]
         what = {"hardened": "Full path through the chat proxy (`th-chat`): guardrails, rate limits, harness, hooks, Gateway, Cedar, tool Lambda, DynamoDB.",
                 "fooled": "Straight to the harness with a system prompt that tells the model to obey the user. Proves the layers below the model.",
-                "gullible": "Fooled prompt plus a weaker model (" + str(m.get("model_override")) + ") that paid the scammer in earlier probes."}.get(m["profile"], "")
+                "gullible": "Fooled prompt plus a weaker model (" + str(m.get("model_override")) + "), still told to obey the user."}.get(m["profile"], "")
         if m.get("ablate"):
             what += " Ablated: " + ", ".join(m["ablate"]) + "."
         L.append(f"| `{l}` | {md_escape(what)} | {', '.join(conditions[l]['files'])} |")

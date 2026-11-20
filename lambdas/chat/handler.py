@@ -12,7 +12,6 @@ import base64
 import datetime
 import functools
 import json
-import os
 import re
 import secrets
 from decimal import Decimal
@@ -21,7 +20,7 @@ from types import SimpleNamespace
 
 from botocore.exceptions import ClientError
 
-from trustedhand import config, db, hashing, ratelimit, receipts, textscan
+from trustedhand import config, db, hashing, ratelimit, receipts, rules, textscan
 
 MAX_MESSAGE = 1000
 MAX_BODY = 16000
@@ -30,6 +29,11 @@ HISTORY_TURNS = 6
 BLOCKED_REPLY = (
     "I can't act on that message. I'm here to help you pay your bills. "
     "Tell me which bill you would like to look at and we can start there."
+)
+SCAM_BLOCKED_REPLY = (
+    "This looks like a known scam. Real police, CBI or bank officers never ask you to pay money "
+    "or move it to a safe account over a call. Please hang up and call {contact}, or the cyber "
+    "crime helpline 1930. New payees and transfers are paused for now. Your regular bills can still be paid."
 )
 FRIENDLY_ERROR = (
     "Sorry, something went wrong on my side. Please try again in a moment. "
@@ -272,6 +276,16 @@ def _clear_notices(household_id, seen):
             _log(f"clear notices failed {e.response['Error']['Code']}")
 
 
+def _set_asked_amounts(rsid, amounts):
+    """Store the rupee amounts Amma named this turn, for the pay tool (R2 / E7). Cleared every turn."""
+    try:
+        db.tbl("sessions").update_item(
+            Key={"pk": "S#" + rsid}, UpdateExpression="SET asked_amounts = :a",
+            ConditionExpression="attribute_exists(pk)", ExpressionAttributeValues={":a": amounts})
+    except Exception as e:
+        _log(f"asked amounts not saved {type(e).__name__}")
+
+
 def _inbox_alert(household_id, title, body):
     item = {
         "household_id": household_id,
@@ -283,7 +297,7 @@ def _inbox_alert(household_id, title, body):
     db.tbl("inbox").put_item(Item=item)
 
 
-CHAT_OK_PATTERNS = {"pay_command", "payee_command"}
+CHAT_OK_PATTERNS = {"pay_command", "payee_command", "upi_handle"}
 SCAM_COMBO = {"secrecy", "pay_command", "payee_command"}
 SECRET_WORDS = re.compile(r"\b(otp|pin|cvv|password|passcode)\b", re.I)
 
@@ -395,13 +409,6 @@ def chat(event):
     if "urgency_threat" in raw_hits and set(raw_hits) & SCAM_COMBO:
         topics.append("threat-plus-money-words")
 
-    if attack:
-        receipts.write(household_id, "guardrail", "deny",
-                       "Guardrail blocked the message as a prompt attack. The agent was not called.",
-                       rule="R10", session_id=rsid)
-        return _resp(200, {"reply": BLOCKED_REPLY, "blocked": True, "frozen": was_frozen,
-                           "receipts": _trim_receipts(household_id, since_sk)})
-
     if topics:
         until = now + int(limits.get("freeze_s", 600))
         reason = "Scam signs in chat: " + ", ".join(sorted(set(topics)))
@@ -411,7 +418,7 @@ def chat(event):
                        f"{reason}. Household frozen for new payees and transfers until {db.ist(frozen_until)}.",
                        rule="R9", session_id=rsid)
         if not was_frozen:
-            elder, contact = hh.get("elder_name", "The elder"), hh.get("contact_name", "you")
+            elder = hh.get("elder_name", "The elder")
             _inbox_alert(
                 household_id,
                 f"Possible scam: {elder} may be being coached",
@@ -420,6 +427,16 @@ def chat(event):
                 f"Please call {elder} now. Known bills can still be paid.",
             )
     frozen = frozen_until > now
+
+    # Prompt attack: the agent is not called. Runs after the freeze so a message that
+    # is both a prompt attack and a scam sign still freezes and alerts the contact.
+    if attack:
+        receipts.write(household_id, "guardrail", "deny",
+                       "Guardrail blocked the message as a prompt attack. The agent was not called.",
+                       rule="R10", session_id=rsid)
+        reply = SCAM_BLOCKED_REPLY.format(contact=hh.get("contact_name", "your family")) if topics else BLOCKED_REPLY
+        return _resp(200, {"reply": reply, "blocked": True, "frozen": frozen,
+                           "receipts": _trim_receipts(household_id, since_sk)})
 
     # Harness call: fixed shape. No model, tools, allowedTools or skills from anywhere.
     history_on = config.env("SEND_HISTORY") == "1"
@@ -443,6 +460,7 @@ def chat(event):
             _log("system_prompt.md missing; sending safety notice inside the message")
             user_text = "[Notice from TrustedHand, not from the user]\n" + SAFETY_ADDENDUM + "\n" + user_text
     messages.append({"role": "user", "content": [{"text": user_text}]})
+    _set_asked_amounts(rsid, rules.asked_amounts(message))
     kwargs.update(runtimeSessionId=rsid, messages=messages)
 
     text, stop, err = "", None, None

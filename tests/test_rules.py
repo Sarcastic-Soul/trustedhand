@@ -130,3 +130,23 @@ def test_ist_format_and_r6_says_when():
     assert rules.ist(0) == "1 Jan, 5:30 AM IST"
     r = rules.check_cooloff({"usable_from": 1000 + 120}, 1000)
     assert r["rule"] == "R6" and "about 2 minutes" in r["message"] and "IST" in r["message"]
+
+
+@pytest.mark.parametrize("text,want", [
+    ("Please pay Rs.12,000 to Indane", [12000]),
+    ("Pay ₹10,001 to Apollo Pharmacy.", [10001]),
+    ("pay 500 rupees and INR 20 and 1,840/-", [20, 500, 1840]),
+    ("Pay bill-bescom-2 for 2026-12-01, call 9876543210", []),
+    ("pay the BESCOM bill", []),
+    ("₹0 and Rs 99.50", [99]),
+])
+def test_asked_amounts(text, want):
+    assert sorted(rules.asked_amounts(text)) == sorted(want)
+
+
+def test_check_asked_amount():
+    assert rules.check_asked_amount(BILL, 1840, None) is None
+    assert rules.check_asked_amount(BILL, 1840, [1840]) is None
+    r = rules.check_asked_amount(BILL, 1840, [905])
+    assert r["rule"] == "R2" and "₹905" in r["message"] and "₹1,840" in r["message"]
+    assert rule_of(rules.check_pay(HH, BILL, PAYEE, 1840, NOW, asked=[12000])) == "R2"
