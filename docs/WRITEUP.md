@@ -9,7 +9,7 @@ No rule broke. The job broke. This project is about that difference: an agent wh
 **[IMAGE 1: upload `docs/img/demo-scam-freeze.png`]**
 
 - Title: Amma's chat during a fake CBI call
-- Alt text: TrustedHand demo screen: Amma's chat on the left, where the agent says the call is a known scam and tells her to hang up and call Ravi or 1930. On the right, Ravi's phone shows a scam alert, and the receipts panel lists which layer froze the account and which rule it used.
+- Alt text: TrustedHand demo screen: Amma's chat on the left, where the agent says the call is a known scam and tells her to hang up, talk to Ravi and call the 1930 helpline. In the middle, Ravi's phone shows a scam alert. On the right, the receipts panel lists which layer froze the account and which rule it used.
 - Caption: A fake CBI officer is coaching Amma. The agent warns her, the account freezes, Ravi is alerted, and every layer writes a receipt.
 
 ## The job, and why it is hard
@@ -72,7 +72,7 @@ Nothing else. The harness has no web, shell, code, file, browser or memory tools
 **[IMAGE 2: upload `docs/img/architecture.png`]**
 
 - Title: TrustedHand architecture
-- Alt text: Diagram of nine layers from top to bottom: chat proxy with Bedrock Guardrails, AgentCore harness with Nova 2 Lite, tool-call hooks, Gateway request interceptor, Cedar policy, Gateway response interceptor, tool Lambda with one DynamoDB transaction, notifier and approval Lambdas, and IAM. Ravi's approval channel sits on the side, outside the model's reach.
+- Alt text: Diagram in three columns. On the left, who types: Amma, the scammer, and poisoned data inside a bill memo. In the middle, the layers from top to bottom: chat proxy with Bedrock Guardrails, AgentCore harness with Nova 2 Lite (the only part that can be talked round), tool-call hooks, Gateway request interceptor, Cedar policy, tool Lambda with one DynamoDB transaction, and Gateway response interceptor, with IAM underneath. Each layer lists what it stops. On the right, a separate channel: the new payee request, the notifier, Ravi's phone and the approval Lambda, which the model has no tool to reach.
 - Caption: A message goes down through nine layers. The model only picks a tool; the layers under it decide whether money moves.
 
 A message goes down through nine layers:
@@ -136,7 +136,7 @@ when { context.input.amount_inr >= 1 && context.input.amount_inr <= 10000 };
 **[IMAGE 3: upload `docs/img/demo-approval-request.png`]**
 
 - Title: A new payee request waiting for Ravi
-- Alt text: TrustedHand demo screen: Amma asked to pay someone new, the agent created a request instead of paying, and Ravi's phone on the right shows the request with the payee name, masked account and amount.
+- Alt text: TrustedHand demo screen: Amma asked to pay someone new, the agent created a request instead of paying, and Ravi's phone in the middle shows the request with the payee name, masked account, amount and Approve and Deny buttons.
 - Caption: The agent cannot add a payee. It can only ask Ravi, and nothing is paid until he approves.
 
 **[IMAGE 4: upload `docs/img/approval-page.png`]**
