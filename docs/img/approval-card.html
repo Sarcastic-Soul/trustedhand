@@ -1,0 +1,30 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Manrope:wght@400;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#f3eee3;--surface:#fbf8f1;--ink:#24211c;--ink2:#5a5448;--line:#d9d0bc;--accent:#1d5c46;--soft:#dae8dc}
+*{box-sizing:border-box;margin:0}
+body{background:var(--paper);color:var(--ink);font:400 18px/1.45 Manrope,sans-serif;width:1200px;height:630px;overflow:hidden;display:grid;grid-template-columns:1fr 330px;gap:56px;padding:44px 72px 0 72px}
+.lab{font:500 13px 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+h1{font:600 42px/1.12 Fraunces,serif;letter-spacing:-.01em;margin-top:14px}
+.sub{color:var(--ink2);margin-top:16px;font-size:19px;max-width:560px}
+ul{list-style:none;padding:0;margin-top:26px;display:flex;flex-direction:column;gap:12px}
+li{display:flex;gap:12px;align-items:flex-start;font-size:17px}
+li span{flex:none;width:26px;height:26px;border-radius:50%;background:var(--soft);color:var(--accent);font:600 14px Manrope;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.foot{margin-top:28px;font:500 13px 'IBM Plex Mono',monospace;color:var(--ink2)}
+.phone{align-self:end;background:#1f1d19;border-radius:36px 36px 0 0;padding:12px 12px 0 12px;height:586px;box-shadow:0 20px 40px rgba(36,33,28,.18)}
+.phone img{display:block;width:306px;border-radius:26px 26px 0 0}
+</style></head><body>
+<div>
+  <div class="lab">TrustedHand · family approval</div>
+  <h1>New payees wait for a trusted family member</h1>
+  <div class="sub">The agent cannot approve anything itself. The trusted person gets a one-time link, separate from the chat.</div>
+  <ul>
+    <li><span>1</span>Nothing is paid until they tap Approve</li>
+    <li><span>2</span>Approval covers that exact payee, account and amount only</li>
+    <li><span>3</span>Money moves only after a cool-off, even once approved</li>
+  </ul>
+  <div class="foot">Demo data · sample payee · no real account</div>
+</div>
+<div class="phone"><img src="approval-page.png" alt=""></div>
+</body></html>
