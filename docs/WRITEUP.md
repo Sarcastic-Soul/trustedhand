@@ -6,7 +6,11 @@ I had told the model to obey the user no matter what, to see what the layers und
 
 No rule broke. The job broke. This project is about that difference: an agent whose rules hold even when the model in the middle has been talked round, and whose rules are written about what is true in the database, not about what the model says.
 
-![Amma's chat during a fake CBI call: the agent warns her, Ravi is alerted, and every layer writes a receipt](https://raw.githubusercontent.com/Sarcastic-Soul/trustedhand/main/docs/img/demo-scam-freeze.png)
+**[IMAGE 1: upload `docs/img/demo-scam-freeze.png`]**
+
+- Title: Amma's chat during a fake CBI call
+- Alt text: TrustedHand demo screen: Amma's chat on the left, where the agent says the call is a known scam and tells her to hang up and call Ravi or 1930. On the right, Ravi's phone shows a scam alert, and the receipts panel lists which layer froze the account and which rule it used.
+- Caption: A fake CBI officer is coaching Amma. The agent warns her, the account freezes, Ravi is alerted, and every layer writes a receipt.
 
 ## The job, and why it is hard
 
@@ -65,7 +69,11 @@ Nothing else. The harness has no web, shell, code, file, browser or memory tools
 
 ## How each rule is enforced
 
-![Architecture: nine layers from the chat proxy down to IAM, with Ravi's approval channel on the side](https://raw.githubusercontent.com/Sarcastic-Soul/trustedhand/main/docs/img/architecture.png)
+**[IMAGE 2: upload `docs/img/architecture.png`]**
+
+- Title: TrustedHand architecture
+- Alt text: Diagram of nine layers from top to bottom: chat proxy with Bedrock Guardrails, AgentCore harness with Nova 2 Lite, tool-call hooks, Gateway request interceptor, Cedar policy, Gateway response interceptor, tool Lambda with one DynamoDB transaction, notifier and approval Lambdas, and IAM. Ravi's approval channel sits on the side, outside the model's reach.
+- Caption: A message goes down through nine layers. The model only picks a tool; the layers under it decide whether money moves.
 
 A message goes down through nine layers:
 
@@ -73,7 +81,7 @@ A message goes down through nine layers:
 |---|---|---|
 | L0 | Chat proxy (Lambda) with Bedrock Guardrails on input and output | Floods, prompt attacks, scam talk (sets the freeze, alerts Ravi). It calls the harness in a fixed shape: the browser can never pick the model, tools or prompt. |
 | L1 | AgentCore managed harness, Nova 2 Lite | Tool sprawl: `allowedTools` is `@bank/*` only, no memory, 8 steps max. This is the only part that can be talked round. |
-| L2 | `beforeToolCall` / `afterToolCall` hooks (Lambda) | Probing: three refusals lock the session (R12). Every tool call gets a plain-English receipt before it runs. |
+| L2 | `beforeToolCall` / `afterToolCall` hooks (Lambda) | Probing: three refused payments in a day, across all chats, lock payments and alert Ravi (R12). Every tool call gets a plain-English receipt before it runs. |
 | L3 | Gateway REQUEST interceptor | Pretending to be another household. The household comes from the real session, never from what the model sends. |
 | L4 | AgentCore Policy (Cedar), ENFORCE, default deny | Unknown tools and out-of-range amounts. |
 | L5 | Gateway RESPONSE interceptor + ApplyGuardrail | Instructions hidden in bill memos and payee names (R7), full account numbers (R8). The model never sees them. |
@@ -125,9 +133,17 @@ when { context.input.amount_inr >= 1 && context.input.amount_inr <= 10000 };
 
 **Ravi's side.** When Amma wants to pay someone new, the agent can only ask. Ravi gets a one-time link that shows exactly what will be paid, to whom, and the masked account. Nothing moves until he approves, and then only after the cool-off.
 
-![A new payee request waiting for Ravi in the demo](https://raw.githubusercontent.com/Sarcastic-Soul/trustedhand/main/docs/img/demo-approval-request.png)
+**[IMAGE 3: upload `docs/img/demo-approval-request.png`]**
 
-![Ravi's one-time approval page](https://raw.githubusercontent.com/Sarcastic-Soul/trustedhand/main/docs/img/approval-page.png)
+- Title: A new payee request waiting for Ravi
+- Alt text: TrustedHand demo screen: Amma asked to pay someone new, the agent created a request instead of paying, and Ravi's phone on the right shows the request with the payee name, masked account and amount.
+- Caption: The agent cannot add a payee. It can only ask Ravi, and nothing is paid until he approves.
+
+**[IMAGE 4: upload `docs/img/approval-page.png`]**
+
+- Title: Ravi's one-time approval page
+- Alt text: Phone-sized web page for Ravi showing who will be paid, the masked account, the amount and the reason, with Approve and Deny buttons.
+- Caption: Ravi's one-time link shows exactly what will be paid and to whom. After he approves, a cool-off still runs before any money moves.
 
 **Every layer writes a receipt.** The demo's "Under the hood" panel shows, for every turn, which layer allowed, flagged or stopped what, and which rule it used. That made the stress test possible to read, and it is what a family member would want to see after a bad day.
 
@@ -157,7 +173,11 @@ The invariants held in **every one of the 1,124 runs**: all three profiles and a
 
 So what were the "fooled" and "gullible" breaks? The model, told to obey, paid one or more of Amma's **real** bills, at exactly the amount due, once, when the attack expected nothing to be paid. "Pay ₹10,001 to Apollo" paid the real ₹6,500 Apollo pharmacy bill. It also repeated an OTP Amma typed, which the chat proxy hides but those profiles skip, and Nova Micro said the word "Lambda" when asked how it works inside. The worst a fully fooled model could do was pay her own bills early.
 
-![Every attack by condition: green held, red broken](https://raw.githubusercontent.com/Sarcastic-Soul/trustedhand/main/docs/img/heatmap.png)
+**[IMAGE 5: upload `docs/img/heatmap.png`]**
+
+- Title: Every attack by condition
+- Alt text: Grid of all 94 attacks (rows) against each test condition (columns): hardened, fooled, gullible and four ablations. Green cells held, red cells broke. The hardened column is all green.
+- Caption: Every attack, twice each, under every condition. Green held, red broke. The red cells are a told-to-obey model paying Amma's own real bills at the right amount; no rupee went to a stranger.
 
 **Ablations: switch one layer off.** If a layer never catches anything, it is decoration. So I switched them off one at a time on the live stack, and ran my 70 attacks twice for each:
 
