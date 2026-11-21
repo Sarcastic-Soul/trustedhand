@@ -253,7 +253,7 @@ The live demo gives you a fresh household with simulated money. You can chat as 
 
 - Live demo: https://d3bp0buhup7qf.cloudfront.net
 - Code (Apache-2.0): https://github.com/Sarcastic-Soul/trustedhand
-- Demo video: VIDEO_LINK
+- Demo video: https://youtu.be/fLR4QHJNXzk
 
 ```bash
 make test                          # 267 unit tests, no AWS needed
