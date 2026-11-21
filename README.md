@@ -4,7 +4,7 @@ A bill-pay agent for an older parent that keeps its rules when a scammer is coac
 
 Live demo: https://d3bp0buhup7qf.cloudfront.net (money is simulated, everything else runs on AWS).
 
-Demo video (3 min): https://youtu.be/fLR4QHJNXzk
+Demo video (2 min 20 s): https://youtu.be/fLR4QHJNXzk
 
 ![Amma's chat during a fake CBI call: the agent warns her, Ravi is alerted, and the receipts show which layer did what](docs/img/demo-scam-freeze.png)
 
